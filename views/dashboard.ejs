@@ -1,0 +1,123 @@
+<%- include('partials/head', { title, lang }) %>
+<%- include('partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<% if (!employee) { %>
+  <div class="alert alert-info">
+    <% if (lang === 'ar') { %>مرحباً بك في لوحة تحكم المدير. استخدم القائمة الجانبية للوصول إلى الإعدادات وإدارة الموظفين.<% } else { %>Welcome to the admin dashboard. Use the sidebar to manage settings and employees.<% } %>
+  </div>
+<% } else { %>
+
+  <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="h4 mb-1">
+        <% if (lang === 'ar') { %>صباح الخير، <%= employee.name_ar.split(' ')[0] %><% } else { %>Good morning, <%= employee.name_en.split(' ')[0] %><% } %>
+      </h2>
+      <p class="text-muted mb-0 small">
+        <%= lang === 'ar' ? 'انضم في' : 'Joined' %> <%= employee.joining_date %>
+        · <%= balance.leaveYearStart %> &ndash; <%= balance.leaveYearEnd %>
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/loans/new" class="btn btn-outline-primary"><%= lang === 'ar' ? 'طلب سلفة' : 'Request a loan' %></a>
+      <a href="/leave/new" class="btn btn-primary"><%= lang === 'ar' ? 'طلب إجازة' : 'Request leave' %></a>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-md-4">
+          <div class="text-muted small mb-1"><%= lang === 'ar' ? 'رصيد الإجازة السنوية المتبقي' : 'Annual paid leave · remaining' %></div>
+          <div class="card-stat-value"><%= balance.remaining %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'يوم متاح الآن' : 'days you can use now' %></div>
+        </div>
+        <div class="col-md-8">
+          <div class="alert alert-light border small mb-0">
+            <% if (lang === 'ar') { %>
+              المستحق <%= balance.fullYearEntitlement %> يوماً سنوياً (30 يوماً بعد السنة السادسة). يُحتسب <%= (balance.fullYearEntitlement/12).toFixed(2) %> يوم عن كل شهر مكتمل.
+            <% } else { %>
+              Entitlement is <%= balance.fullYearEntitlement %> days a year (30 days from your 6th year). It accrues <%= (balance.fullYearEntitlement/12).toFixed(2) %> days for each completed month.
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <% const total = Math.max(0.0001, balance.taken + balance.pending + balance.remaining);
+         const pctTaken = (balance.taken/total*100).toFixed(1);
+         const pctPending = (balance.pending/total*100).toFixed(1);
+         const pctRemaining = (balance.remaining/total*100).toFixed(1); %>
+      <div class="progress progress-leave my-3">
+        <div class="progress-bar" style="width: <%= pctTaken %>%; background-color: var(--rmc-navy);"></div>
+        <div class="progress-bar" style="width: <%= pctPending %>%; background-color: #e8a33d;"></div>
+        <div class="progress-bar" style="width: <%= pctRemaining %>%; background-color: #8fb8f6;"></div>
+      </div>
+      <div class="small text-muted mb-3">
+        <span class="me-3">&#9632; <%= lang === 'ar' ? 'مستخدم' : 'Taken' %> <%= balance.taken %></span>
+        <span class="me-3">&#9632; <%= lang === 'ar' ? 'قيد الموافقة' : 'Pending' %> <%= balance.pending %></span>
+        <span>&#9632; <%= lang === 'ar' ? 'متبقي' : 'Remaining' %> <%= balance.remaining %></span>
+      </div>
+
+      <div class="row text-center border-top pt-3">
+        <div class="col">
+          <div class="fw-bold fs-5"><%= balance.fullYearEntitlement %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'المستحق السنوي' : 'Full-year entitlement' %></div>
+        </div>
+        <div class="col">
+          <div class="fw-bold fs-5"><%= balance.accruedToDate %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'المتراكم حتى الآن' : 'Accrued to date' %></div>
+        </div>
+        <div class="col">
+          <div class="fw-bold fs-5"><%= balance.carriedOver %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'مرحّل من العام السابق' : 'Carried over' %></div>
+        </div>
+        <div class="col">
+          <div class="fw-bold fs-5"><%= balance.taken %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'مستخدم هذا العام' : 'Taken this year' %></div>
+        </div>
+        <div class="col">
+          <div class="fw-bold fs-5"><%= balance.pending %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'قيد الموافقة' : 'Pending approval' %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="h6 mb-0"><%= lang === 'ar' ? 'طلباتي الأخيرة' : 'My recent requests' %></h3>
+        <a href="/leave" class="small"><%= lang === 'ar' ? 'عرض كل السجل' : 'View all history' %></a>
+      </div>
+      <% if (!recentRequests || recentRequests.length === 0) { %>
+        <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد طلبات بعد.' : 'No requests yet.' %></p>
+      <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead class="text-muted small">
+              <tr>
+                <th><%= lang === 'ar' ? 'النوع' : 'Type' %></th>
+                <th><%= lang === 'ar' ? 'التواريخ' : 'Dates' %></th>
+                <th><%= lang === 'ar' ? 'الأيام' : 'Days' %></th>
+                <th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recentRequests.forEach(function(r) { %>
+                <tr>
+                  <td><%= r.type_name %></td>
+                  <td><%= r.start_date %> &ndash; <%= r.end_date %></td>
+                  <td><%= r.amount %></td>
+                  <td><span class="badge badge-status-<%= r.status %>"><%= r.status %></span></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+<% } %>
+
+<%- include('partials/app-shell-end') %>
+<%- include('partials/scripts') %>

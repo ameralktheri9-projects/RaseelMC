@@ -1,0 +1,47 @@
+<%
+  const navItems = [
+    { href: '/dashboard', key: 'nav.dashboard', icon: '🏠' },
+    { href: '/leave', key: 'nav.myLeave', icon: '📅' },
+    { href: '/loans', key: 'nav.myLoans', icon: '💳' },
+    { href: '/approvals', key: 'nav.approvals', icon: '✅' },
+    { href: '/reports', key: 'nav.reports', icon: '📊' },
+    { href: '/settings', key: 'nav.settings', icon: '⚙️' },
+  ];
+%>
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="brand-logo mb-4 px-1">Raseel <span style="color:var(--rmc-accent)">MC</span></div>
+    <nav class="nav flex-column">
+      <% navItems.forEach(function(item) { %>
+        <a class="nav-link <%= currentPath && currentPath.startsWith(item.href) ? 'active' : '' %>" href="<%= item.href %>">
+          <span><%= item.icon %></span> <span><%= t(lang, item.key) %></span>
+        </a>
+      <% }) %>
+    </nav>
+  </aside>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <h1 class="h4 mb-0"><%= title %></h1>
+      <div class="d-flex align-items-center gap-2">
+        <form method="POST" action="/set-language" class="m-0">
+          <input type="hidden" name="lang" value="<%= lang === 'ar' ? 'en' : 'ar' %>">
+          <button type="submit" class="btn btn-outline-secondary btn-sm"><%= lang === 'ar' ? 'English' : 'العربية' %></button>
+        </form>
+        <div class="dropdown">
+          <button class="btn btn-light btn-sm rounded-circle" style="width:38px;height:38px;" data-bs-toggle="dropdown">
+            <%= (currentUser.nameEn || '?').split(' ').map(function(w){return w[0];}).slice(0,2).join('') %>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-muted"><%= lang === 'ar' ? currentUser.nameAr : currentUser.nameEn %></span></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="POST" action="/logout" class="m-0">
+                <button type="submit" class="dropdown-item"><%= t(lang, 'nav.logout') %></button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="app-content">

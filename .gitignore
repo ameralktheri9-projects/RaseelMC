@@ -1,0 +1,21 @@
+## Node / npm
+node_modules/
+npm-debug.log*
+
+## Build output
+dist/
+
+## Local data (SQLite DB, uploaded attachments) and local env config
+data/
+.env
+.env.local
+
+## Editor / OS
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
+
+## Logs
+*.log
+logs/

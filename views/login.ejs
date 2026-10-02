@@ -1,0 +1,76 @@
+<%- include('partials/head', { title, lang }) %>
+
+<div class="auth-shell row g-0">
+  <div class="col-lg-6 d-none d-lg-flex auth-brand-panel">
+    <div>
+      <span class="badge-pill">🔒 <%= t(lang, 'login.internalNetworkOnly') %></span>
+      <h1 class="display-6 fw-bold mb-3">
+        <% if (lang === 'ar') { %>
+          إجازاتك وسلفك، في مكان واحد.
+        <% } else { %>
+          Your leave and loans,<br>in one place.
+        <% } %>
+      </h1>
+      <p class="fs-5" style="color:#cfe0ff;">
+        <% if (lang === 'ar') { %>
+          اطّلع على رصيد إجازتك، قدّم طلب إجازة، وتقدّم بطلب سلفة من راتبك. يتبع كل طلب مسار موافقة واضح.
+        <% } else { %>
+          See your paid leave balance, request time off and apply for a salary loan. Every request follows a clear approval path.
+        <% } %>
+      </p>
+      <ul>
+        <li><% if (lang === 'ar') { %>رصيد الإجازة يُحتسب من تاريخ التعيين<% } else { %>Leave balance calculated from your joining date<% } %></li>
+        <li><% if (lang === 'ar') { %>سداد السلفة بمبلغ ثابت أو عدد أشهر<% } else { %>Loan repayment by fixed amount or number of months<% } %></li>
+        <li><% if (lang === 'ar') { %>تتبّع كل خطوة من خطوات الموافقة لحظياً<% } else { %>Track every approval step in real time<% } %></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-6 auth-form-panel">
+    <div class="auth-form-card">
+      <div class="mb-4 d-flex justify-content-between align-items-start">
+        <div class="brand-logo">Raseel <span style="color:var(--rmc-accent)">MC</span></div>
+        <form method="POST" action="/set-language" class="m-0">
+          <input type="hidden" name="lang" value="<%= lang === 'ar' ? 'en' : 'ar' %>">
+          <button type="submit" class="btn btn-outline-secondary btn-sm">
+            <%= lang === 'ar' ? 'English' : 'العربية' %>
+          </button>
+        </form>
+      </div>
+
+      <h2 class="h3 mb-1"><%= t(lang, 'login.title') %></h2>
+      <p class="text-muted mb-4"><%= t(lang, 'login.subtitle') %></p>
+
+      <% if (timeout) { %>
+        <div class="alert alert-warning py-2 small">
+          <% if (lang === 'ar') { %>انتهت الجلسة بسبب عدم النشاط. الرجاء تسجيل الدخول مرة أخرى.<% } else { %>Your session timed out due to inactivity. Please sign in again.<% } %>
+        </div>
+      <% } %>
+      <% if (error) { %>
+        <div class="alert alert-danger py-2 small"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/login">
+        <div class="mb-3">
+          <label class="form-label fw-semibold"><%= t(lang, 'login.username') %></label>
+          <input type="text" name="username" class="form-control form-control-lg" autocomplete="username" required autofocus>
+        </div>
+        <div class="mb-3">
+          <div class="d-flex justify-content-between">
+            <label class="form-label fw-semibold"><%= t(lang, 'login.password') %></label>
+          </div>
+          <input type="password" name="password" class="form-control form-control-lg" autocomplete="current-password" required>
+        </div>
+        <div class="form-check mb-4">
+          <input class="form-check-input" type="checkbox" name="keepSignedIn" id="keepSignedIn">
+          <label class="form-check-label text-muted" for="keepSignedIn"><%= t(lang, 'login.keepSignedIn') %></label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg w-100"><%= t(lang, 'login.submit') %></button>
+      </form>
+
+      <p class="text-muted small mt-4 mb-0"><%= t(lang, 'login.forgotPasswordHelp') %></p>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/scripts') %>

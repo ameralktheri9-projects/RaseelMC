@@ -1,0 +1,213 @@
+:root {
+  --rmc-navy: #0b2e5c;
+  --rmc-navy-dark: #082348;
+  --rmc-blue: #1a56a8;
+  --rmc-accent: #2f6fd1;
+  --rmc-bg: #f4f6fa;
+  --rmc-card-bg: #ffffff;
+  --rmc-border: #e4e8f0;
+  --rmc-text: #1c2434;
+  --rmc-text-muted: #6b7489;
+  --rmc-success-bg: #e6f6ec;
+  --rmc-success-text: #1e7e43;
+  --rmc-warning-bg: #fdf1e0;
+  --rmc-warning-text: #9a5b0a;
+  --rmc-danger-bg: #fbe9e9;
+  --rmc-danger-text: #b3261e;
+}
+
+body {
+  background-color: var(--rmc-bg);
+  color: var(--rmc-text);
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}
+
+[dir="rtl"] body {
+  font-family: "Segoe UI", Tahoma, "Noto Kufi Arabic", Arial, sans-serif;
+}
+
+a {
+  color: var(--rmc-blue);
+}
+
+.text-muted {
+  color: var(--rmc-text-muted) !important;
+}
+
+/* Auth layout (login, split screen) */
+.auth-shell {
+  min-height: 100vh;
+}
+
+.auth-brand-panel {
+  background: linear-gradient(160deg, var(--rmc-navy) 0%, var(--rmc-navy-dark) 100%);
+  color: #fff;
+  min-height: 100vh;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-brand-panel .badge-pill {
+  background: rgba(255, 255, 255, 0.12);
+  color: #cfe0ff;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 2rem;
+}
+
+.auth-brand-panel ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 1.5rem;
+}
+
+.auth-brand-panel ul li {
+  padding-left: 1.2rem;
+  position: relative;
+  margin-bottom: 0.6rem;
+  color: #d8e3fb;
+}
+
+.auth-brand-panel ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6ea2f5;
+}
+
+[dir="rtl"] .auth-brand-panel ul li {
+  padding-left: 0;
+  padding-right: 1.2rem;
+}
+[dir="rtl"] .auth-brand-panel ul li::before {
+  left: auto;
+  right: 0;
+}
+
+.auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.auth-form-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.brand-logo {
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--rmc-navy);
+}
+
+/* App shell (sidebar + content) */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-right: 1px solid var(--rmc-border);
+  padding: 1.5rem 1rem;
+}
+
+[dir="rtl"] .app-sidebar {
+  border-right: none;
+  border-left: 1px solid var(--rmc-border);
+}
+
+.app-sidebar .nav-link {
+  color: var(--rmc-text);
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.925rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.app-sidebar .nav-link.active {
+  background: #eaf1ff;
+  color: var(--rmc-blue);
+  font-weight: 600;
+}
+
+.app-sidebar .nav-link:hover {
+  background: #f3f5f9;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--rmc-border);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-content {
+  padding: 1.5rem;
+}
+
+.card {
+  border: 1px solid var(--rmc-border);
+  border-radius: 10px;
+}
+
+.card-stat-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--rmc-navy);
+}
+
+.badge-status-pending {
+  background: var(--rmc-warning-bg);
+  color: var(--rmc-warning-text);
+}
+.badge-status-approved {
+  background: var(--rmc-success-bg);
+  color: var(--rmc-success-text);
+}
+.badge-status-rejected,
+.badge-status-cancelled {
+  background: var(--rmc-danger-bg);
+  color: var(--rmc-danger-text);
+}
+
+.btn-primary {
+  background-color: var(--rmc-navy);
+  border-color: var(--rmc-navy);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--rmc-navy-dark);
+  border-color: var(--rmc-navy-dark);
+}
+
+.progress-leave {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+}
