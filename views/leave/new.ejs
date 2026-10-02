@@ -1,0 +1,82 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-1"><%= lang === 'ar' ? 'طلب إجازة' : 'Request leave' %></h2>
+        <p class="text-muted small mb-4"><%= lang === 'ar' ? 'لا تُحتسب عطلات نهاية الأسبوع (الجمعة والسبت) والعطلات الرسمية.' : 'Weekends (Fri-Sat) and official holidays are not counted.' %></p>
+
+        <% if (error) { %>
+          <div class="alert alert-danger py-2 small"><%= error %></div>
+        <% } %>
+
+        <form method="POST" action="/leave/new" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'نوع الإجازة' : 'Leave type' %></label>
+            <select name="leaveTypeId" class="form-select" required>
+              <% leaveTypes.forEach(function(lt) { %>
+                <option value="<%= lt.id %>" <%= form.leaveTypeId == lt.id ? 'selected' : '' %>>
+                  <%= lang === 'ar' ? lt.name_ar : lt.name_en %><%= lt.is_paid ? '' : (lang === 'ar' ? ' (بدون راتب)' : ' (unpaid)') %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold"><%= lang === 'ar' ? 'تاريخ البداية' : 'Start date' %></label>
+              <input type="date" name="startDate" class="form-control" value="<%= form.startDate || '' %>" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold"><%= lang === 'ar' ? 'تاريخ النهاية' : 'End date' %></label>
+              <input type="date" name="endDate" class="form-control" value="<%= form.endDate || '' %>" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'السبب (اختياري)' : 'Reason (optional)' %></label>
+            <textarea name="reason" class="form-control" rows="3"><%= form.reason || '' %></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'التسليم لزميل' : 'Handover to colleague' %></label>
+            <select name="handoverEmployeeId" class="form-select">
+              <option value=""><%= lang === 'ar' ? '-- لا أحد --' : '-- None --' %></option>
+              <% colleagues.forEach(function(c) { %>
+                <option value="<%= c.id %>"><%= lang === 'ar' ? c.name_ar : c.name_en %> &middot; <%= c.job_title %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'مرفق (مطلوب للإجازة المرضية، PDF/JPG حتى 5 ميجابايت)' : 'Attachment (required for sick leave, PDF/JPG up to 5MB)' %></label>
+            <input type="file" name="attachment" class="form-control" accept=".pdf,.jpg,.jpeg">
+          </div>
+
+          <div class="d-flex gap-2">
+            <a href="/leave" class="btn btn-outline-secondary"><%= t(lang, 'common.cancel') %></a>
+            <button type="submit" class="btn btn-primary"><%= t(lang, 'common.submit') %></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><%= lang === 'ar' ? 'معلومة' : 'Note' %></h3>
+        <p class="text-muted small mb-0">
+          <%= lang === 'ar'
+            ? 'سيظهر تأثير الطلب على رصيدك ومسار الموافقة بعد الإرسال، في صفحة سجل الإجازات.'
+            : 'Balance impact and the approval route will be shown on the leave history page after you submit.' %>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

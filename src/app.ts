@@ -7,6 +7,7 @@ import { attachLocals } from "./middleware/auth";
 import { t, dirFor } from "./i18n";
 import { authRouter } from "./routes/auth";
 import { dashboardRouter } from "./routes/dashboard";
+import { leaveRouter } from "./routes/leave";
 
 export function createApp(): express.Express {
   const app = express();
@@ -59,6 +60,7 @@ export function createApp(): express.Express {
 
   app.use("/", authRouter);
   app.use("/", dashboardRouter);
+  app.use("/", leaveRouter);
 
   app.use((_req, res) => {
     res.status(404).render("errors/404", { title: "Not found" });

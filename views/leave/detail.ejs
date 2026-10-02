@@ -1,0 +1,44 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<a href="/leave" class="small d-inline-block mb-3">&larr; <%= t(lang, 'common.back') %></a>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h2 class="h5 mb-1"><%= lang === 'ar' ? request.type_name_ar : request.type_name_en %></h2>
+        <p class="text-muted small mb-0"><%= request.start_date %> &ndash; <%= request.end_date %> &middot; <%= request.working_days %> <%= t(lang, 'common.days') %></p>
+      </div>
+      <span class="badge badge-status-<%= request.status %> fs-6"><%= request.status %></span>
+    </div>
+    <% if (request.reason) { %>
+      <hr>
+      <div class="text-muted small"><%= lang === 'ar' ? 'السبب' : 'Reason' %></div>
+      <div><%= request.reason %></div>
+    <% } %>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h3 class="h6 mb-3"><%= lang === 'ar' ? 'مسار الموافقة' : 'Approval trail' %></h3>
+    <% if (!trail || trail.length === 0) { %>
+      <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا يوجد سجل بعد.' : 'No actions yet.' %></p>
+    <% } else { %>
+      <ul class="list-unstyled mb-0">
+        <% trail.forEach(function(a) { %>
+          <li class="mb-2 small">
+            <strong><%= a.action %></strong>
+            <% if (a.approver_name_en) { %> &middot; <%= lang === 'ar' ? a.approver_name_ar : a.approver_name_en %><% } %>
+            <span class="text-muted"> &middot; <%= a.created_at %></span>
+            <% if (a.comment) { %><div class="text-muted fst-italic">"<%= a.comment %>"</div><% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

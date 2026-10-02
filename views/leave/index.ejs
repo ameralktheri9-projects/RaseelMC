@@ -1,0 +1,50 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0"><%= lang === 'ar' ? 'سجل إجازاتي' : 'My leave history' %></h2>
+  <a href="/leave/new" class="btn btn-primary btn-sm"><%= lang === 'ar' ? 'طلب إجازة' : 'Request leave' %></a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <% if (!requests || requests.length === 0) { %>
+      <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد طلبات بعد.' : 'No requests yet.' %></p>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead class="text-muted small">
+            <tr>
+              <th><%= lang === 'ar' ? 'النوع' : 'Type' %></th>
+              <th><%= lang === 'ar' ? 'التواريخ' : 'Dates' %></th>
+              <th><%= lang === 'ar' ? 'الأيام' : 'Days' %></th>
+              <th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% requests.forEach(function(r) { %>
+              <tr>
+                <td><%= lang === 'ar' ? r.type_name_ar : r.type_name_en %><% if (r.is_cancellation_of) { %> <span class="badge bg-light text-muted"><%= lang === 'ar' ? 'إلغاء' : 'cancellation' %></span><% } %></td>
+                <td><%= r.start_date %> &ndash; <%= r.end_date %></td>
+                <td><%= r.working_days %></td>
+                <td><span class="badge badge-status-<%= r.status %>"><%= r.status %></span></td>
+                <td class="text-end">
+                  <a href="/leave/<%= r.id %>" class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'عرض' : 'View' %></a>
+                  <% if (r.status === 'pending' || r.status === 'returned' || r.status === 'approved') { %>
+                    <form method="POST" action="/leave/<%= r.id %>/cancel" class="d-inline" onsubmit="return confirm('<%= lang === 'ar' ? 'هل أنت متأكد؟' : 'Are you sure?' %>');">
+                      <button type="submit" class="btn btn-sm btn-outline-danger"><%= lang === 'ar' ? 'إلغاء' : 'Cancel' %></button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>
