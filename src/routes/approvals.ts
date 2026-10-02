@@ -191,6 +191,7 @@ approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
       balance,
       trail,
       canAct,
+      error: req.query.error === "comment_required" ? "comment_required" : null,
     });
     return;
   }
@@ -210,7 +211,13 @@ approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
   }
 
   const trail = getApprovalTrail("loan", id);
-  res.render("approvals/detail-loan", { title: t(lang, "nav.approvals"), lang, request, trail });
+  res.render("approvals/detail-loan", {
+    title: t(lang, "nav.approvals"),
+    lang,
+    request,
+    trail,
+    error: req.query.error === "comment_required" ? "comment_required" : null,
+  });
 });
 
 approvalsRouter.post("/approvals/:type/:id/action", requireAuth, (req, res) => {
@@ -220,7 +227,7 @@ approvalsRouter.post("/approvals/:type/:id/action", requireAuth, (req, res) => {
   const { action, comment } = req.body as { action: "approve" | "reject" | "return"; comment?: string };
 
   if ((action === "reject" || action === "return") && !comment) {
-    res.status(400).send("Comment is required to reject or return a request.");
+    res.redirect(`/approvals/${requestType}/${id}?error=comment_required`);
     return;
   }
 

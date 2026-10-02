@@ -1,7 +1,7 @@
 import { Router } from "express";
 import dayjs from "dayjs";
 import { db, asRow } from "../db";
-import { requireAuth, requireRole } from "../middleware/auth";
+import { requireAuth, requireRole, requireEmployee } from "../middleware/auth";
 import { t } from "../i18n";
 import {
   planFromFixedAmount,
@@ -42,7 +42,7 @@ function activeLoanCount(employeeId: number): number {
   return row.n;
 }
 
-loansRouter.get("/loans", requireAuth, (req, res) => {
+loansRouter.get("/loans", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
 
@@ -53,7 +53,7 @@ loansRouter.get("/loans", requireAuth, (req, res) => {
   res.render("loans/index", { title: t(lang, "nav.myLoans"), lang, requests });
 });
 
-loansRouter.get("/loans/new", requireAuth, (req, res) => {
+loansRouter.get("/loans/new", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
   const limits = getEffectiveLimits(employee.id);
@@ -78,7 +78,7 @@ function buildPlanFromBody(body: Record<string, string>): LoanPlan {
   return planFromFixedAmount(amount, Number(body.monthlyAmount), firstMonth);
 }
 
-loansRouter.post("/loans/preview", requireAuth, (req, res) => {
+loansRouter.post("/loans/preview", requireAuth, requireEmployee, (req, res) => {
   const employee = currentEmployee(req);
   const body = req.body as Record<string, string>;
   try {
@@ -92,7 +92,7 @@ loansRouter.post("/loans/preview", requireAuth, (req, res) => {
   }
 });
 
-loansRouter.post("/loans/new", requireAuth, (req, res) => {
+loansRouter.post("/loans/new", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
   const sessionUser = req.session.user!;
@@ -183,7 +183,7 @@ loansRouter.post("/loans/new", requireAuth, (req, res) => {
   res.redirect("/loans");
 });
 
-loansRouter.get("/loans/:id", requireAuth, (req, res) => {
+loansRouter.get("/loans/:id", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
   const id = Number(req.params.id);
@@ -204,7 +204,7 @@ loansRouter.get("/loans/:id", requireAuth, (req, res) => {
   res.render("loans/detail", { title: t(lang, "nav.myLoans"), lang, request, instalments, trail });
 });
 
-loansRouter.post("/loans/:id/cancel", requireAuth, (req, res) => {
+loansRouter.post("/loans/:id/cancel", requireAuth, requireEmployee, (req, res) => {
   const employee = currentEmployee(req);
   const id = Number(req.params.id);
   const request = asRow<LoanRequest | undefined>(

@@ -20,6 +20,19 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
+/** Guards employee-self-service routes (leave, loans) against accounts with no linked employee record (e.g. System Admin). */
+export function requireEmployee(req: Request, res: Response, next: NextFunction): void {
+  if (!req.session.user) {
+    res.redirect("/login");
+    return;
+  }
+  if (req.session.user.employeeId == null) {
+    res.redirect("/dashboard?notice=no-employee-profile");
+    return;
+  }
+  next();
+}
+
 export function requireRole(...roles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = req.session.user;

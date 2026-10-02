@@ -4,7 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { db, asRow } from "../db";
 import { config } from "../config";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireEmployee } from "../middleware/auth";
 import { t } from "../i18n";
 import {
   computeLeaveBalance,
@@ -37,7 +37,7 @@ function currentEmployee(req: any): Employee {
   );
 }
 
-leaveRouter.get("/leave", requireAuth, (req, res) => {
+leaveRouter.get("/leave", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
 
@@ -53,7 +53,7 @@ leaveRouter.get("/leave", requireAuth, (req, res) => {
   res.render("leave/index", { title: t(lang, "nav.myLeave"), lang, requests });
 });
 
-leaveRouter.get("/leave/new", requireAuth, (req, res) => {
+leaveRouter.get("/leave/new", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
 
@@ -78,7 +78,7 @@ leaveRouter.get("/leave/new", requireAuth, (req, res) => {
   });
 });
 
-leaveRouter.post("/leave/new", requireAuth, upload.single("attachment"), async (req, res) => {
+leaveRouter.post("/leave/new", requireAuth, requireEmployee, upload.single("attachment"), async (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
   const sessionUser = req.session.user!;
@@ -228,7 +228,7 @@ leaveRouter.post("/leave/new", requireAuth, upload.single("attachment"), async (
   res.redirect("/leave");
 });
 
-leaveRouter.post("/leave/:id/cancel", requireAuth, (req, res) => {
+leaveRouter.post("/leave/:id/cancel", requireAuth, requireEmployee, (req, res) => {
   const employee = currentEmployee(req);
   const id = Number(req.params.id);
 
@@ -258,7 +258,7 @@ leaveRouter.post("/leave/:id/cancel", requireAuth, (req, res) => {
   res.redirect("/leave");
 });
 
-leaveRouter.get("/leave/:id", requireAuth, (req, res) => {
+leaveRouter.get("/leave/:id", requireAuth, requireEmployee, (req, res) => {
   const lang = req.session.user!.language;
   const employee = currentEmployee(req);
   const id = Number(req.params.id);

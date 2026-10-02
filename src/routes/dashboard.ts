@@ -21,13 +21,60 @@ dashboardRouter.get("/dashboard", requireAuth, (req, res) => {
   const lang = sessionUser.language;
 
   if (!sessionUser.employeeId) {
-    // System admin with no linked employee record: show a minimal admin landing.
+    // System admin / HR-only account with no linked employee record: show company-wide stats instead.
+    const totalEmployees = (
+      db.prepare("SELECT COUNT(*) as n FROM employees WHERE status = 'active'").get() as { n: number }
+    ).n;
+    const pendingLeaveCount = (
+      db.prepare("SELECT COUNT(*) as n FROM leave_requests WHERE status = 'pending'").get() as {
+        n: number;
+      }
+    ).n;
+    const pendingLoanCount = (
+      db.prepare("SELECT COUNT(*) as n FROM loan_requests WHERE status = 'pending'").get() as {
+        n: number;
+      }
+    ).n;
+    const activeLoans = db
+      .prepare(
+        `SELECT COUNT(*) as n, COALESCE(SUM(amount), 0) as total_amount,
+                COALESCE((SELECT SUM(amount) FROM loan_instalments li
+                          WHERE li.loan_request_id IN (SELECT id FROM loan_requests WHERE status = 'disbursed')
+                          AND li.status = 'deducted'), 0) as total_paid
+         FROM loan_requests WHERE status = 'disbursed'`
+      )
+      .get() as { n: number; total_amount: number; total_paid: number };
+    const today = new Date().toISOString().slice(0, 10);
+    const onLeaveToday = db
+      .prepare(
+        `SELECT e.name_en, e.name_ar, lr.end_date
+         FROM leave_requests lr JOIN employees e ON e.id = lr.employee_id
+         WHERE lr.status = 'approved' AND lr.start_date <= ? AND lr.end_date >= ?
+         ORDER BY lr.end_date`
+      )
+      .all(today, today);
+    const recentActivity = db
+      .prepare(
+        `SELECT al.action, al.record_type, al.created_at, u.username
+         FROM audit_log al LEFT JOIN users u ON u.id = al.user_id
+         ORDER BY al.id DESC LIMIT 8`
+      )
+      .all();
+
     res.render("dashboard", {
       title: t(lang, "nav.dashboard"),
       lang,
       employee: null,
       balance: null,
-      leaveType: null,
+      adminStats: {
+        totalEmployees,
+        pendingLeaveCount,
+        pendingLoanCount,
+        activeLoansCount: activeLoans.n,
+        activeLoansOutstanding: activeLoans.total_amount - activeLoans.total_paid,
+        onLeaveToday,
+        recentActivity,
+      },
     });
     return;
   }

@@ -2,8 +2,73 @@
 <%- include('partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
 
 <% if (!employee) { %>
-  <div class="alert alert-info">
-    <% if (lang === 'ar') { %>مرحباً بك في لوحة تحكم المدير. استخدم القائمة الجانبية للوصول إلى الإعدادات وإدارة الموظفين.<% } else { %>Welcome to the admin dashboard. Use the sidebar to manage settings and employees.<% } %>
+  <h2 class="h4 mb-3"><%= lang === 'ar' ? 'نظرة عامة' : 'Overview' %></h2>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body text-center">
+        <div class="card-stat-value"><%= adminStats.totalEmployees %></div>
+        <div class="text-muted small"><%= lang === 'ar' ? 'الموظفون النشطون' : 'Active employees' %></div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body text-center">
+        <a href="/approvals" class="text-decoration-none">
+          <div class="card-stat-value"><%= adminStats.pendingLeaveCount + adminStats.pendingLoanCount %></div>
+          <div class="text-muted small"><%= lang === 'ar' ? 'طلبات بانتظار الموافقة' : 'Pending approvals' %></div>
+        </a>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body text-center">
+        <div class="card-stat-value"><%= adminStats.activeLoansCount %></div>
+        <div class="text-muted small"><%= lang === 'ar' ? 'سلف نشطة' : 'Active loans' %></div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body text-center">
+        <div class="card-stat-value">SAR <%= adminStats.activeLoansOutstanding.toFixed(0) %></div>
+        <div class="text-muted small"><%= lang === 'ar' ? 'رصيد السلف المستحق' : 'Loans outstanding' %></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h3 class="h6 mb-3"><%= lang === 'ar' ? 'في إجازة اليوم' : 'On leave today' %></h3>
+          <% if (!adminStats.onLeaveToday || adminStats.onLeaveToday.length === 0) { %>
+            <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا أحد في إجازة اليوم.' : 'No one is on leave today.' %></p>
+          <% } else { %>
+            <ul class="list-unstyled mb-0 small">
+              <% adminStats.onLeaveToday.forEach(function(e) { %>
+                <li class="mb-1"><%= lang === 'ar' ? e.name_ar : e.name_en %> <span class="text-muted">&middot; <%= lang === 'ar' ? 'حتى' : 'until' %> <%= e.end_date %></span></li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h3 class="h6 mb-3"><%= lang === 'ar' ? 'آخر النشاطات' : 'Recent activity' %></h3>
+          <% if (!adminStats.recentActivity || adminStats.recentActivity.length === 0) { %>
+            <p class="text-muted small mb-0">&mdash;</p>
+          <% } else { %>
+            <ul class="list-unstyled mb-0 small">
+              <% adminStats.recentActivity.forEach(function(a) { %>
+                <li class="mb-1"><span class="text-muted"><%= a.username || '-' %></span> <code><%= a.action %></code> <span class="text-muted"><%= a.created_at %></span></li>
+              <% }) %>
+            </ul>
+          <% } %>
+          <% if (currentUser.roles.includes('system_admin')) { %>
+            <a href="/audit-log" class="small d-inline-block mt-2"><%= lang === 'ar' ? 'عرض سجل التدقيق الكامل' : 'View full audit log' %></a>
+          <% } %>
+        </div>
+      </div>
+    </div>
   </div>
 <% } else { %>
 
