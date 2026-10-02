@@ -8,6 +8,7 @@ import { t, dirFor } from "./i18n";
 import { authRouter } from "./routes/auth";
 import { dashboardRouter } from "./routes/dashboard";
 import { leaveRouter } from "./routes/leave";
+import { approvalsRouter } from "./routes/approvals";
 
 export function createApp(): express.Express {
   const app = express();
@@ -61,6 +62,7 @@ export function createApp(): express.Express {
   app.use("/", authRouter);
   app.use("/", dashboardRouter);
   app.use("/", leaveRouter);
+  app.use("/", approvalsRouter);
 
   app.use((_req, res) => {
     res.status(404).render("errors/404", { title: "Not found" });

@@ -1,0 +1,76 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#pending-tab"><%= lang === 'ar' ? 'قيد الموافقة' : 'Pending' %> (<%= pending.length %>)</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#decided-tab"><%= lang === 'ar' ? 'تم اتخاذ قرار' : 'Decided' %></a></li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="pending-tab">
+    <div class="card">
+      <div class="card-body">
+        <% if (!pending || pending.length === 0) { %>
+          <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد طلبات بانتظار موافقتك.' : 'Nothing waiting on your approval.' %></p>
+        <% } else { %>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead class="text-muted small">
+                <tr>
+                  <th><%= lang === 'ar' ? 'الموظف' : 'Employee' %></th>
+                  <th><%= lang === 'ar' ? 'النوع' : 'Type' %></th>
+                  <th><%= lang === 'ar' ? 'التفاصيل' : 'Details' %></th>
+                  <th><%= lang === 'ar' ? 'القسم' : 'Department' %></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% pending.forEach(function(r) { %>
+                  <tr>
+                    <td><%= lang === 'ar' ? r.name_ar : r.name_en %><div class="text-muted small"><%= r.employee_code %></div></td>
+                    <td><%= lang === 'ar' ? r.sub_type_ar : r.sub_type_en %></td>
+                    <td>
+                      <% if (r.request_type === 'leave') { %>
+                        <%= r.start_date %> &ndash; <%= r.end_date %> (<%= r.amount %> <%= t(lang, 'common.days') %>)
+                      <% } else { %>
+                        SAR <%= r.amount %>
+                      <% } %>
+                    </td>
+                    <td><%= lang === 'ar' ? r.dept_ar : r.dept_en %></td>
+                    <td class="text-end">
+                      <a href="/approvals/<%= r.request_type %>/<%= r.id %>" class="btn btn-sm btn-primary"><%= lang === 'ar' ? 'مراجعة' : 'Review' %></a>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="decided-tab">
+    <div class="card">
+      <div class="card-body">
+        <% if (!decided || decided.length === 0) { %>
+          <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا يوجد سجل بعد.' : 'No history yet.' %></p>
+        <% } else { %>
+          <ul class="list-unstyled mb-0">
+            <% decided.forEach(function(a) { %>
+              <li class="mb-2 small border-bottom pb-2">
+                <span class="badge badge-status-<%= a.action %>"><%= a.action %></span>
+                <%= a.request_type %> #<%= a.request_id %>
+                <span class="text-muted"> &middot; <%= a.created_at %></span>
+                <% if (a.comment) { %><div class="text-muted fst-italic">"<%= a.comment %>"</div><% } %>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

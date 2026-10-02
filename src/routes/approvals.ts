@@ -1,0 +1,252 @@
+import { Router } from "express";
+import { db, asRow } from "../db";
+import { requireAuth } from "../middleware/auth";
+import { t } from "../i18n";
+import { advanceRequest, getApprovalTrail, buildApprovalRoute } from "../services/workflowEngine";
+import {
+  computeLeaveBalance,
+  getEntitlementRules,
+  getOrCreateLeaveBalanceRow,
+  getPendingLeaveDays,
+} from "../services/leaveCalculationService";
+import type { Employee, RequestType } from "../models/types";
+
+export const approvalsRouter = Router();
+
+approvalsRouter.get("/approvals", requireAuth, (req, res) => {
+  const lang = req.session.user!.language;
+  const userId = req.session.user!.userId;
+
+  const pending = db
+    .prepare(
+      `SELECT lr.id, 'leave' as request_type, lr.current_step_order, lr.created_at, lr.working_days as amount,
+              e.name_en, e.name_ar, e.employee_code, d.name_en as dept_en, d.name_ar as dept_ar,
+              lt.name_en as sub_type_en, lt.name_ar as sub_type_ar,
+              lr.start_date, lr.end_date, lr.workflow_id
+       FROM leave_requests lr
+       JOIN employees e ON e.id = lr.employee_id
+       LEFT JOIN departments d ON d.id = e.department_id
+       JOIN leave_types lt ON lt.id = lr.leave_type_id
+       WHERE lr.status = 'pending'
+       UNION ALL
+       SELECT lo.id, 'loan' as request_type, lo.current_step_order, lo.created_at, lo.amount,
+              e.name_en, e.name_ar, e.employee_code, d.name_en as dept_en, d.name_ar as dept_ar,
+              'Loan' as sub_type_en, 'سلفة' as sub_type_ar,
+              NULL as start_date, NULL as end_date, lo.workflow_id
+       FROM loan_requests lo
+       JOIN employees e ON e.id = lo.employee_id
+       LEFT JOIN departments d ON d.id = e.department_id
+       WHERE lo.status = 'pending'
+       ORDER BY 4 DESC`
+    )
+    .all() as any[];
+
+  // Filter down to requests actually waiting on this user's step (resolves approver dynamically).
+  const myPending = pending.filter((r) => {
+    const workflow = asRow<any>(db.prepare("SELECT * FROM workflows WHERE id = ?").get(r.workflow_id));
+    if (!workflow) return false;
+    const employee = asRow<Employee>(
+      db
+        .prepare(
+          `SELECT e.* FROM employees e
+           JOIN ${r.request_type === "leave" ? "leave_requests" : "loan_requests"} req ON req.employee_id = e.id
+           WHERE req.id = ?`
+        )
+        .get(r.id)
+    );
+    const route = buildApprovalRoute(workflow, employee);
+    const step = route.find((s: any) => s.stepOrder === r.current_step_order);
+    return step && step.approverUserId === userId;
+  });
+
+  const decided = db
+    .prepare(
+      `SELECT aa.*,
+              CASE WHEN aa.request_type = 'leave' THEN lr.employee_id ELSE lo.employee_id END as employee_id
+       FROM approval_actions aa
+       LEFT JOIN leave_requests lr ON aa.request_type = 'leave' AND lr.id = aa.request_id
+       LEFT JOIN loan_requests lo ON aa.request_type = 'loan' AND lo.id = aa.request_id
+       WHERE aa.approver_user_id = ? AND aa.action IN ('approved','rejected','returned')
+       ORDER BY aa.created_at DESC LIMIT 50`
+    )
+    .all(userId);
+
+  res.render("approvals/index", {
+    title: t(lang, "nav.approvals"),
+    lang,
+    pending: myPending,
+    decided,
+  });
+});
+
+approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
+  const lang = req.session.user!.language;
+  const requestType = req.params.type as RequestType;
+  const id = Number(req.params.id);
+
+  if (requestType === "leave") {
+    const request = db
+      .prepare(
+        `SELECT lr.*, lt.name_en as type_name_en, lt.name_ar as type_name_ar,
+                e.name_en as emp_name_en, e.name_ar as emp_name_ar, e.employee_code, e.job_title,
+                h.name_en as handover_name_en, h.name_ar as handover_name_ar
+         FROM leave_requests lr
+         JOIN leave_types lt ON lt.id = lr.leave_type_id
+         JOIN employees e ON e.id = lr.employee_id
+         LEFT JOIN employees h ON h.id = lr.handover_employee_id
+         WHERE lr.id = ?`
+      )
+      .get(id) as any;
+
+    if (!request) {
+      res.status(404).render("errors/404", { title: "Not found" });
+      return;
+    }
+
+    const employee = asRow<Employee>(
+      db.prepare("SELECT * FROM employees WHERE id = ?").get(request.employee_id)
+    );
+    const rules = getEntitlementRules();
+    const asOf = new Date().toISOString().slice(0, 10);
+    const pending = getPendingLeaveDays(employee.id, request.leave_type_id);
+    const prelim = computeLeaveBalance({
+      employee,
+      asOf,
+      entitlementRules: rules,
+      carriedOver: 0,
+      taken: 0,
+      pending,
+      manualAdjustment: 0,
+    });
+    const balanceRow = getOrCreateLeaveBalanceRow(
+      employee.id,
+      request.leave_type_id,
+      prelim.leaveYearStart,
+      prelim.leaveYearEnd,
+      prelim.fullYearEntitlement
+    );
+    const balance = computeLeaveBalance({
+      employee,
+      asOf,
+      entitlementRules: rules,
+      carriedOver: balanceRow.carried_over,
+      taken: balanceRow.taken,
+      pending,
+      manualAdjustment: balanceRow.manual_adjustment,
+    });
+
+    const trail = getApprovalTrail("leave", id);
+    const canAct = request.status === "pending" && request.current_step_order != null;
+
+    res.render("approvals/detail-leave", {
+      title: t(lang, "nav.approvals"),
+      lang,
+      request,
+      balance,
+      trail,
+      canAct,
+    });
+    return;
+  }
+
+  // loan
+  const request = db
+    .prepare(
+      `SELECT lo.*, e.name_en as emp_name_en, e.name_ar as emp_name_ar, e.employee_code, e.job_title
+       FROM loan_requests lo JOIN employees e ON e.id = lo.employee_id
+       WHERE lo.id = ?`
+    )
+    .get(id);
+
+  if (!request) {
+    res.status(404).render("errors/404", { title: "Not found" });
+    return;
+  }
+
+  const trail = getApprovalTrail("loan", id);
+  res.render("approvals/detail-loan", { title: t(lang, "nav.approvals"), lang, request, trail });
+});
+
+approvalsRouter.post("/approvals/:type/:id/action", requireAuth, (req, res) => {
+  const requestType = req.params.type as RequestType;
+  const id = Number(req.params.id);
+  const sessionUser = req.session.user!;
+  const { action, comment } = req.body as { action: "approve" | "reject" | "return"; comment?: string };
+
+  if ((action === "reject" || action === "return") && !comment) {
+    res.status(400).send("Comment is required to reject or return a request.");
+    return;
+  }
+
+  const table = requestType === "leave" ? "leave_requests" : "loan_requests";
+  const request = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as any;
+  if (!request) {
+    res.status(404).send("Not found");
+    return;
+  }
+  const employee = asRow<Employee>(
+    db.prepare("SELECT * FROM employees WHERE id = ?").get(request.employee_id)
+  );
+
+  const actionMap = { approve: "approved", reject: "rejected", return: "returned" } as const;
+
+  const result = advanceRequest(
+    requestType,
+    id,
+    employee,
+    sessionUser.userId,
+    actionMap[action],
+    comment || null
+  );
+
+  // LV-16: approved leave days are deducted from the balance automatically.
+  if (requestType === "leave" && result.newStatus === "approved") {
+    const rules = getEntitlementRules();
+    const asOf = new Date().toISOString().slice(0, 10);
+    const { leaveYearStart, leaveYearEnd } = computeLeaveBalance({
+      employee,
+      asOf,
+      entitlementRules: rules,
+      carriedOver: 0,
+      taken: 0,
+      pending: 0,
+      manualAdjustment: 0,
+    });
+    const balanceRow = getOrCreateLeaveBalanceRow(
+      employee.id,
+      request.leave_type_id,
+      leaveYearStart,
+      leaveYearEnd,
+      0
+    );
+    if (request.is_cancellation_of) {
+      // Approving a cancellation request restores the days on the original leave and cancels it.
+      db.prepare("UPDATE leave_requests SET status = 'cancelled' WHERE id = ?").run(
+        request.is_cancellation_of
+      );
+      db.prepare("UPDATE leave_balances SET taken = taken - ? WHERE id = ?").run(
+        request.working_days,
+        balanceRow.id
+      );
+    } else {
+      db.prepare("UPDATE leave_balances SET taken = taken + ? WHERE id = ?").run(
+        request.working_days,
+        balanceRow.id
+      );
+    }
+  }
+
+  db.prepare(
+    `INSERT INTO audit_log (user_id, action, record_type, record_id, new_value_json, ip_address)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(
+    sessionUser.userId,
+    `${action}_${requestType}_request`,
+    table,
+    id,
+    JSON.stringify({ action, comment }),
+    req.ip ?? null
+  );
+
+  res.redirect("/approvals");
+});
