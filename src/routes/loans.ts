@@ -260,6 +260,50 @@ loansRouter.get(
   }
 );
 
+// LN-13: Finance can record early settlement with a reason (logged).
+loansRouter.post(
+  "/loans/:id/settle",
+  requireAuth,
+  requireRole("finance", "system_admin"),
+  (req, res) => {
+    const id = Number(req.params.id);
+    const reason = (req.body.reason as string) || "";
+    if (!reason.trim()) {
+      res.status(400).send("A reason is required to record an early settlement.");
+      return;
+    }
+
+    db.prepare(
+      "UPDATE loan_instalments SET status = 'skipped' WHERE loan_request_id = ? AND status != 'deducted'"
+    ).run(id);
+    db.prepare("UPDATE loan_requests SET status = 'closed', closed_at = ? WHERE id = ?").run(
+      dayjs().toISOString(),
+      id
+    );
+
+    db.prepare(
+      `INSERT INTO audit_log (user_id, action, record_type, record_id, new_value_json, ip_address)
+       VALUES (?, 'early_settle_loan', 'loan_requests', ?, ?, ?)`
+    ).run(req.session.user!.userId, id, JSON.stringify({ reason }), req.ip ?? null);
+
+    const loan = db.prepare("SELECT employee_id FROM loan_requests WHERE id = ?").get(id) as {
+      employee_id: number;
+    };
+    const notifyUserId = employeeIdToUserId(loan.employee_id);
+    if (notifyUserId != null) {
+      notify(
+        notifyUserId,
+        "loan_settled",
+        `Your loan was settled early. Reason: ${reason}`,
+        `تمت تسوية سلفتك مبكراً. السبب: ${reason}`,
+        `/loans/${id}`
+      );
+    }
+
+    res.redirect(`/loans/${id}/instalments`);
+  }
+);
+
 loansRouter.post(
   "/loans/:id/disburse",
   requireAuth,

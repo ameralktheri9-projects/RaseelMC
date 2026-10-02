@@ -31,5 +31,22 @@
   </div>
 </div>
 
+<% if (loan.status !== 'closed') { %>
+  <div class="card mt-3">
+    <div class="card-body">
+      <h3 class="h6 mb-2"><%= lang === 'ar' ? 'تسوية مبكرة' : 'Early settlement' %></h3>
+      <p class="text-muted small"><%= lang === 'ar' ? 'يغلق هذا القرض ويُلغي كل الأقساط المتبقية (غير المخصومة).' : 'This closes the loan and cancels all remaining (non-deducted) instalments.' %></p>
+      <form method="POST" action="/loans/<%= loan.id %>/settle" class="row g-2" onsubmit="return confirm('<%= lang === 'ar' ? 'هل أنت متأكد من التسوية المبكرة؟' : 'Confirm early settlement?' %>');">
+        <div class="col-md-8">
+          <input type="text" name="reason" class="form-control" placeholder="<%= lang === 'ar' ? 'السبب (مطلوب)' : 'Reason (required)' %>" required>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-outline-primary w-100"><%= lang === 'ar' ? 'تسوية مبكرة' : 'Record early settlement' %></button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
 <%- include('../partials/app-shell-end') %>
 <%- include('../partials/scripts') %>
