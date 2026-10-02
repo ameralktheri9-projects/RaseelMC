@@ -1,11 +1,11 @@
 <%
   const navItems = [
-    { href: '/dashboard', key: 'nav.dashboard', icon: '🏠' },
-    { href: '/leave', key: 'nav.myLeave', icon: '📅' },
-    { href: '/loans', key: 'nav.myLoans', icon: '💳' },
-    { href: '/approvals', key: 'nav.approvals', icon: '✅' },
-    { href: '/reports', key: 'nav.reports', icon: '📊' },
-    { href: '/settings', key: 'nav.settings', icon: '⚙️' },
+    { href: '/dashboard', key: 'nav.dashboard', icon: '🏠', enabled: true },
+    { href: '/leave', key: 'nav.myLeave', icon: '📅', enabled: false },
+    { href: '/loans', key: 'nav.myLoans', icon: '💳', enabled: false },
+    { href: '/approvals', key: 'nav.approvals', icon: '✅', enabled: false },
+    { href: '/reports', key: 'nav.reports', icon: '📊', enabled: false },
+    { href: '/settings', key: 'nav.settings', icon: '⚙️', enabled: false },
   ];
 %>
 <div class="app-shell">
@@ -13,9 +13,16 @@
     <div class="brand-logo mb-4 px-1">Raseel <span style="color:var(--rmc-accent)">MC</span></div>
     <nav class="nav flex-column">
       <% navItems.forEach(function(item) { %>
-        <a class="nav-link <%= currentPath && currentPath.startsWith(item.href) ? 'active' : '' %>" href="<%= item.href %>">
-          <span><%= item.icon %></span> <span><%= t(lang, item.key) %></span>
-        </a>
+        <% if (item.enabled) { %>
+          <a class="nav-link <%= currentPath && currentPath.startsWith(item.href) ? 'active' : '' %>" href="<%= item.href %>">
+            <span><%= item.icon %></span> <span><%= t(lang, item.key) %></span>
+          </a>
+        <% } else { %>
+          <span class="nav-link disabled text-muted" style="cursor: default; opacity: 0.5;" title="<%= lang === 'ar' ? 'قريباً' : 'Coming soon' %>">
+            <span><%= item.icon %></span> <span><%= t(lang, item.key) %></span>
+            <span class="badge bg-light text-muted ms-auto" style="font-size: 0.65rem;"><%= lang === 'ar' ? 'قريباً' : 'soon' %></span>
+          </span>
+        <% } %>
       <% }) %>
     </nav>
   </aside>
