@@ -1,0 +1,50 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0"><%= lang === 'ar' ? 'سلفي' : 'My loans' %></h2>
+  <a href="/loans/new" class="btn btn-primary btn-sm"><%= lang === 'ar' ? 'طلب سلفة' : 'Request a loan' %></a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <% if (!requests || requests.length === 0) { %>
+      <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد طلبات بعد.' : 'No requests yet.' %></p>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead class="text-muted small">
+            <tr>
+              <th><%= lang === 'ar' ? 'المبلغ' : 'Amount' %></th>
+              <th><%= lang === 'ar' ? 'القسط الشهري' : 'Monthly' %></th>
+              <th><%= lang === 'ar' ? 'الأشهر' : 'Months' %></th>
+              <th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% requests.forEach(function(r) { %>
+              <tr>
+                <td>SAR <%= r.amount %></td>
+                <td>SAR <%= r.monthly_amount %></td>
+                <td><%= r.months %></td>
+                <td><span class="badge badge-status-<%= r.status %>"><%= r.status %></span></td>
+                <td class="text-end">
+                  <a href="/loans/<%= r.id %>" class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'عرض' : 'View' %></a>
+                  <% if (r.status === 'pending' || r.status === 'returned') { %>
+                    <form method="POST" action="/loans/<%= r.id %>/cancel" class="d-inline" onsubmit="return confirm('<%= lang === 'ar' ? 'هل أنت متأكد؟' : 'Are you sure?' %>');">
+                      <button type="submit" class="btn btn-sm btn-outline-danger"><%= lang === 'ar' ? 'إلغاء' : 'Cancel' %></button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

@@ -9,6 +9,7 @@ import { authRouter } from "./routes/auth";
 import { dashboardRouter } from "./routes/dashboard";
 import { leaveRouter } from "./routes/leave";
 import { approvalsRouter } from "./routes/approvals";
+import { loansRouter } from "./routes/loans";
 
 export function createApp(): express.Express {
   const app = express();
@@ -63,6 +64,7 @@ export function createApp(): express.Express {
   app.use("/", dashboardRouter);
   app.use("/", leaveRouter);
   app.use("/", approvalsRouter);
+  app.use("/", loansRouter);
 
   app.use((_req, res) => {
     res.status(404).render("errors/404", { title: "Not found" });

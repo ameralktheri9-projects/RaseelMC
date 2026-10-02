@@ -1,0 +1,35 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<a href="/loans-finance" class="small d-inline-block mb-3">&larr; <%= t(lang, 'common.back') %></a>
+
+<h2 class="h5 mb-1"><%= lang === 'ar' ? loan.name_ar : loan.name_en %> &middot; SAR <%= loan.amount %></h2>
+<p class="text-muted small mb-3"><%= loan.employee_code %> &middot; <span class="badge badge-status-<%= loan.status %>"><%= loan.status %></span></p>
+
+<div class="card">
+  <div class="card-body">
+    <table class="table align-middle">
+      <thead class="text-muted small"><tr><th>#</th><th><%= lang === 'ar' ? 'الشهر' : 'Month' %></th><th><%= lang === 'ar' ? 'المبلغ' : 'Amount' %></th><th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th><th></th></tr></thead>
+      <tbody>
+        <% instalments.forEach(function(i) { %>
+          <tr>
+            <td><%= i.instalment_number %></td>
+            <td><%= i.due_month %></td>
+            <td>SAR <%= i.amount %></td>
+            <td><span class="badge badge-status-<%= i.status === 'deducted' ? 'approved' : 'pending' %>"><%= i.status %></span></td>
+            <td class="text-end">
+              <% if (i.status !== 'deducted') { %>
+                <form method="POST" action="/loans/<%= loan.id %>/instalments/<%= i.instalment_number %>/deduct">
+                  <button type="submit" class="btn btn-sm btn-primary"><%= lang === 'ar' ? 'تم الخصم' : 'Mark deducted' %></button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

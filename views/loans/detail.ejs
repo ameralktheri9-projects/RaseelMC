@@ -1,0 +1,68 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<a href="/loans" class="small d-inline-block mb-3">&larr; <%= t(lang, 'common.back') %></a>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h2 class="h5 mb-1">SAR <%= request.amount %></h2>
+            <p class="text-muted small mb-0">SAR <%= request.monthly_amount %>/<%= lang === 'ar' ? 'شهر' : 'mo' %> &middot; <%= request.months %> <%= lang === 'ar' ? 'شهر' : 'months' %></p>
+          </div>
+          <span class="badge badge-status-<%= request.status %> fs-6"><%= request.status %></span>
+        </div>
+        <% if (request.reason) { %>
+          <hr>
+          <div class="text-muted small"><%= lang === 'ar' ? 'السبب' : 'Reason' %></div>
+          <div><%= request.reason %></div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><%= lang === 'ar' ? 'جدول السداد' : 'Repayment schedule' %></h3>
+        <table class="table table-sm">
+          <thead class="text-muted small"><tr><th>#</th><th><%= lang === 'ar' ? 'الشهر' : 'Month' %></th><th><%= lang === 'ar' ? 'المبلغ' : 'Amount' %></th><th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th></tr></thead>
+          <tbody>
+            <% instalments.forEach(function(i) { %>
+              <tr>
+                <td><%= i.instalment_number %></td>
+                <td><%= i.due_month %></td>
+                <td>SAR <%= i.amount %></td>
+                <td><span class="badge badge-status-<%= i.status === 'deducted' ? 'approved' : 'pending' %>"><%= i.status %></span></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><%= lang === 'ar' ? 'مسار الموافقة' : 'Approval trail' %></h3>
+        <% if (!trail || trail.length === 0) { %>
+          <p class="text-muted small mb-0">&mdash;</p>
+        <% } else { %>
+          <ul class="list-unstyled mb-0">
+            <% trail.forEach(function(a) { %>
+              <li class="mb-2 small">
+                <strong><%= a.action %></strong>
+                <% if (a.approver_name_en) { %> &middot; <%= lang === 'ar' ? a.approver_name_ar : a.approver_name_en %><% } %>
+                <div class="text-muted"><%= a.created_at %></div>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

@@ -1,0 +1,46 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<h2 class="h5 mb-3"><%= lang === 'ar' ? 'السلف النشطة' : 'Active loans' %></h2>
+
+<div class="card">
+  <div class="card-body">
+    <% if (!loans || loans.length === 0) { %>
+      <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد سلف.' : 'No loans.' %></p>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead class="text-muted small">
+            <tr>
+              <th><%= lang === 'ar' ? 'الموظف' : 'Employee' %></th>
+              <th><%= lang === 'ar' ? 'المبلغ' : 'Amount' %></th>
+              <th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% loans.forEach(function(l) { %>
+              <tr>
+                <td><%= lang === 'ar' ? l.name_ar : l.name_en %> <span class="text-muted small"><%= l.employee_code %></span></td>
+                <td>SAR <%= l.amount %></td>
+                <td><span class="badge badge-status-<%= l.status %>"><%= l.status %></span></td>
+                <td class="text-end">
+                  <% if (l.status === 'approved') { %>
+                    <form method="POST" action="/loans/<%= l.id %>/disburse" class="d-inline">
+                      <button type="submit" class="btn btn-sm btn-primary"><%= lang === 'ar' ? 'صرف' : 'Mark disbursed' %></button>
+                    </form>
+                  <% } else { %>
+                    <a href="/loans/<%= l.id %>/instalments" class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'الأقساط' : 'Instalments' %></a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

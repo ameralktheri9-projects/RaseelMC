@@ -1,0 +1,161 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-1"><%= lang === 'ar' ? 'طلب سلفة' : 'Request a loan' %></h2>
+        <p class="text-muted small mb-4"><%= lang === 'ar' ? 'بدون فوائد. تُسدد بخصم شهري من راتبك.' : 'Interest-free. Repaid by monthly deduction from your salary.' %></p>
+
+        <% if (error) { %>
+          <div class="alert alert-danger py-2 small"><%= error %></div>
+        <% } %>
+
+        <form method="POST" action="/loans/new" id="loan-form">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold"><%= lang === 'ar' ? 'مبلغ السلفة (ريال)' : 'Loan amount (SAR)' %></label>
+              <input type="number" step="0.01" name="amount" id="f-amount" class="form-control" value="<%= form.amount || '' %>" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold"><%= lang === 'ar' ? 'أول شهر خصم' : 'First deduction month' %></label>
+              <input type="month" name="firstDeductionMonth" id="f-month" class="form-control" value="<%= form.firstDeductionMonth || '' %>" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-block"><%= lang === 'ar' ? 'طريقة السداد' : 'How do you want to repay?' %></label>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="repaymentOption" id="opt-fixed" value="fixed_amount" <%= (form.repaymentOption || 'fixed_amount') === 'fixed_amount' ? 'checked' : '' %>>
+              <label class="form-check-label" for="opt-fixed"><%= lang === 'ar' ? 'مبلغ شهري ثابت' : 'Fixed monthly amount' %></label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="repaymentOption" id="opt-months" value="months" <%= form.repaymentOption === 'months' ? 'checked' : '' %>>
+              <label class="form-check-label" for="opt-months"><%= lang === 'ar' ? 'عدد الأشهر' : 'Number of months' %></label>
+            </div>
+          </div>
+
+          <div class="mb-3" id="field-monthly">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'الخصم الشهري (ريال)' : 'Monthly deduction (SAR)' %></label>
+            <input type="number" step="0.01" name="monthlyAmount" id="f-monthly" class="form-control" value="<%= form.monthlyAmount || '' %>">
+          </div>
+          <div class="mb-3 d-none" id="field-months">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'عدد الأشهر' : 'Number of months' %></label>
+            <input type="number" name="months" id="f-months" class="form-control" value="<%= form.months || '' %>">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold"><%= lang === 'ar' ? 'السبب' : 'Reason' %></label>
+            <textarea name="reason" class="form-control" rows="2"><%= form.reason || '' %></textarea>
+          </div>
+
+          <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" name="termsAccepted" value="1" id="terms" <%= form.termsAccepted ? 'checked' : '' %>>
+            <label class="form-check-label small" for="terms">
+              <%= lang === 'ar'
+                ? 'أوافق على خصم الأقساط من راتبي، وتسوية أي رصيد متبقٍ من مستحقاتي النهائية في حال تركي العمل.'
+                : 'I agree that the instalments are deducted from my salary, and any outstanding balance is settled from my final dues if I leave Raseel MC.' %>
+            </label>
+          </div>
+
+          <div class="d-flex gap-2">
+            <a href="/loans" class="btn btn-outline-secondary"><%= t(lang, 'common.cancel') %></a>
+            <button type="submit" class="btn btn-primary"><%= t(lang, 'common.submit') %></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><%= lang === 'ar' ? 'جدول السداد' : 'Repayment schedule' %></h3>
+        <div id="schedule-container" class="text-muted small"><%= lang === 'ar' ? 'أدخل المبلغ لعرض الجدول.' : 'Enter an amount to see the schedule.' %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><%= lang === 'ar' ? 'حدودك' : 'Your loan limits' %></h3>
+        <table class="table table-sm mb-0">
+          <tr><td class="text-muted"><%= lang === 'ar' ? 'الراتب الإجمالي' : 'Gross salary' %></td><td class="text-end">SAR <%= employee.gross_salary %></td></tr>
+          <tr><td class="text-muted"><%= lang === 'ar' ? 'الحد الأقصى للمبلغ' : 'Maximum loan amount' %></td><td class="text-end"><%= limits.maxAmount ?? (lang === 'ar' ? 'لا يوجد' : 'No limit') %></td></tr>
+          <tr><td class="text-muted"><%= lang === 'ar' ? 'الحد الأقصى للخصم الشهري' : 'Maximum monthly deduction' %></td><td class="text-end"><%= limits.maxMonthlyDeduction != null ? (limits.maxMonthlyDeductionIsPercent ? limits.maxMonthlyDeduction + '%' : 'SAR ' + limits.maxMonthlyDeduction) : (lang === 'ar' ? 'لا يوجد' : 'No limit') %></td></tr>
+          <tr><td class="text-muted"><%= lang === 'ar' ? 'الحد الأقصى للمدة' : 'Maximum period' %></td><td class="text-end"><%= limits.maxMonths ?? (lang === 'ar' ? 'لا يوجد' : 'No limit') %></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var optFixed = document.getElementById('opt-fixed');
+  var optMonths = document.getElementById('opt-months');
+  var fieldMonthly = document.getElementById('field-monthly');
+  var fieldMonths = document.getElementById('field-months');
+
+  function syncFields() {
+    if (optMonths.checked) {
+      fieldMonthly.classList.add('d-none');
+      fieldMonths.classList.remove('d-none');
+    } else {
+      fieldMonthly.classList.remove('d-none');
+      fieldMonths.classList.add('d-none');
+    }
+  }
+  optFixed.addEventListener('change', syncFields);
+  optMonths.addEventListener('change', syncFields);
+  syncFields();
+
+  var form = document.getElementById('loan-form');
+  var scheduleContainer = document.getElementById('schedule-container');
+  var lang = '<%= lang %>';
+
+  async function refreshPreview() {
+    var amount = document.getElementById('f-amount').value;
+    var firstMonth = document.getElementById('f-month').value;
+    var repaymentOption = optMonths.checked ? 'months' : 'fixed_amount';
+    var monthlyAmount = document.getElementById('f-monthly').value;
+    var months = document.getElementById('f-months').value;
+
+    if (!amount || !firstMonth || (repaymentOption === 'fixed_amount' && !monthlyAmount) || (repaymentOption === 'months' && !months)) {
+      return;
+    }
+
+    var body = new URLSearchParams({ amount, firstDeductionMonth: firstMonth, repaymentOption, monthlyAmount, months });
+    try {
+      var resp = await fetch('/loans/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      var data = await resp.json();
+      if (data.error) {
+        scheduleContainer.innerHTML = '<div class="text-danger small">' + data.error + '</div>';
+        return;
+      }
+      var html = '';
+      if (!data.validation.valid) {
+        html += '<div class="alert alert-warning py-2 small">' + data.validation.errors.join(' ') + '</div>';
+      }
+      html += '<table class="table table-sm"><thead><tr><th>#</th><th>' + (lang === 'ar' ? 'الشهر' : 'Month') + '</th><th>' + (lang === 'ar' ? 'القسط' : 'Instalment') + '</th><th>' + (lang === 'ar' ? 'المتبقي' : 'Remaining') + '</th></tr></thead><tbody>';
+      data.plan.schedule.forEach(function (row) {
+        html += '<tr><td>' + row.instalmentNumber + '</td><td>' + row.dueMonth + '</td><td>' + row.amount + '</td><td>' + row.remainingAfter + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      scheduleContainer.innerHTML = html;
+    } catch (e) {
+      // ignore transient preview errors
+    }
+  }
+
+  form.addEventListener('input', refreshPreview);
+  form.addEventListener('change', refreshPreview);
+})();
+</script>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>
