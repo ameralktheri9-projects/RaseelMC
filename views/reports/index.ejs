@@ -1,0 +1,35 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<%
+  const roles = (currentUser && currentUser.roles) || [];
+  const isAdmin = roles.includes('system_admin');
+  const isHr = roles.includes('hr_officer') || isAdmin;
+  const isFinance = roles.includes('finance') || isAdmin;
+  const reports = [
+    { href: '/reports/leave-balance.xlsx', en: 'Leave balance by employee / department', ar: 'رصيد الإجازة حسب الموظف / القسم', show: isHr },
+    { href: '/reports/leave-taken.xlsx', en: 'Leave taken by period and type', ar: 'الإجازات المستخدمة حسب الفترة والنوع', show: true },
+    { href: '/reports/pending-approvals.xlsx', en: 'Pending approvals and ageing', ar: 'الموافقات المعلّقة ومدتها', show: isHr },
+    { href: '/reports/active-loans.xlsx', en: 'Active loans and outstanding balances', ar: 'السلف النشطة والأرصدة المتبقية', show: isFinance },
+    { href: '/reports/deduction-schedule.xlsx', en: 'Monthly payroll deduction schedule', ar: 'جدول خصم الرواتب الشهري', show: isFinance },
+    { href: '/reports/audit-log.xlsx', en: 'Audit log', ar: 'سجل التدقيق', show: isAdmin },
+  ];
+%>
+
+<h2 class="h5 mb-3"><%= lang === 'ar' ? 'التقارير' : 'Reports' %></h2>
+
+<div class="row g-3">
+  <% reports.filter(function(r){ return r.show; }).forEach(function(r) { %>
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <span><%= lang === 'ar' ? r.ar : r.en %></span>
+          <a href="<%= r.href %>" class="btn btn-sm btn-outline-primary"><%= lang === 'ar' ? 'تنزيل Excel' : 'Download Excel' %></a>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>
