@@ -1,0 +1,80 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<a href="/settings/users" class="small d-inline-block mb-3">&larr; <%= t(lang, 'common.back') %></a>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h5 mb-3"><%= lang === 'ar' ? 'تعديل موظف' : 'Edit employee' %> &middot; <%= employee.employee_code %></h2>
+    <form method="POST" action="/settings/users/<%= employee.id %>/edit">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label small">Name (EN)</label>
+          <input name="nameEn" class="form-control" value="<%= employee.name_en %>" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label small">الاسم (عربي)</label>
+          <input name="nameAr" class="form-control" value="<%= employee.name_ar %>" dir="rtl" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'القسم' : 'Department' %></label>
+          <select name="departmentId" class="form-select">
+            <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+            <% departments.forEach(function(d) { %>
+              <option value="<%= d.id %>" <%= employee.department_id === d.id ? 'selected' : '' %>><%= lang === 'ar' ? d.name_ar : d.name_en %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'المسمى الوظيفي' : 'Position' %></label>
+          <select name="jobTitle" class="form-select">
+            <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+            <% positions.forEach(function(p) { %>
+              <option value="<%= p.name_en %>" <%= employee.job_title === p.name_en ? 'selected' : '' %>><%= lang === 'ar' ? p.name_ar : p.name_en %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الدرجة الوظيفية' : 'Job grade' %></label>
+          <input name="jobGrade" class="form-control" value="<%= employee.job_grade || '' %>">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'المدير المباشر' : 'Direct manager' %></label>
+          <select name="directManagerId" class="form-select">
+            <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+            <% employees.forEach(function(e) { %>
+              <option value="<%= e.id %>" <%= employee.direct_manager_id === e.id ? 'selected' : '' %>><%= lang === 'ar' ? e.name_ar : e.name_en %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'تاريخ التعيين' : 'Joining date' %></label>
+          <input type="date" name="joiningDate" class="form-control" value="<%= employee.joining_date %>" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الراتب الإجمالي' : 'Gross salary' %></label>
+          <input type="number" name="grossSalary" class="form-control" value="<%= employee.gross_salary || '' %>">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small"><%= lang === 'ar' ? 'الحالة' : 'Status' %></label>
+        <select name="status" class="form-select" style="max-width: 220px;">
+          <option value="active" <%= employee.status === 'active' ? 'selected' : '' %>><%= lang === 'ar' ? 'نشط' : 'Active' %></option>
+          <option value="on_leave" <%= employee.status === 'on_leave' ? 'selected' : '' %>><%= lang === 'ar' ? 'في إجازة' : 'On leave' %></option>
+          <option value="terminated" <%= employee.status === 'terminated' ? 'selected' : '' %>><%= lang === 'ar' ? 'منتهي الخدمة' : 'Terminated' %></option>
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/settings/users" class="btn btn-outline-secondary"><%= t(lang, 'common.cancel') %></a>
+        <button type="submit" class="btn btn-primary"><%= t(lang, 'common.save') %></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

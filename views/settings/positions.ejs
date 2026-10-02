@@ -1,0 +1,41 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h3 class="h5 mb-3"><%= lang === 'ar' ? 'إضافة مسمى وظيفي' : 'Add a position' %></h3>
+    <p class="text-muted small"><%= lang === 'ar' ? 'تُستخدم هذه القائمة كخيارات عند إضافة أو تعديل موظف.' : 'This list is used as the dropdown when adding or editing an employee.' %></p>
+    <form method="POST" action="/settings/positions" class="row g-2">
+      <div class="col-md-5"><input name="nameEn" class="form-control" placeholder="Name (English)" required></div>
+      <div class="col-md-5"><input name="nameAr" class="form-control" placeholder="الاسم (عربي)" dir="rtl" required></div>
+      <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">+</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h3 class="h5 mb-3"><%= lang === 'ar' ? 'المسميات الوظيفية' : 'Positions' %></h3>
+    <table class="table table-sm align-middle">
+      <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'الاسم' : 'Name' %></th><th></th></tr></thead>
+      <tbody>
+        <% positions.forEach(function(p) { %>
+          <tr>
+            <td><%= lang === 'ar' ? p.name_ar : p.name_en %><% if (!p.is_active) { %> <span class="badge bg-light text-muted"><%= lang === 'ar' ? 'معطل' : 'inactive' %></span><% } %></td>
+            <td class="text-end">
+              <% if (p.is_active) { %>
+                <form method="POST" action="/settings/positions/<%= p.id %>/delete">
+                  <button class="btn btn-sm btn-outline-danger"><%= t(lang, 'common.delete') %></button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

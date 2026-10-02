@@ -18,6 +18,15 @@
 
 <h2 class="h5 mb-3"><%= lang === 'ar' ? 'التقارير' : 'Reports' %></h2>
 
+<% if (isHr) { %>
+  <div class="card mb-3 border-primary">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <span><%= lang === 'ar' ? 'أرصدة إجازات الموظفين (عرض تفاعلي)' : 'Employee leave balances (interactive view)' %></span>
+      <a href="/reports/leave-balances" class="btn btn-sm btn-primary"><%= lang === 'ar' ? 'عرض' : 'View' %></a>
+    </div>
+  </div>
+<% } %>
+
 <div class="row g-3">
   <% reports.filter(function(r){ return r.show; }).forEach(function(r) { %>
     <div class="col-md-6">

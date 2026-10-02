@@ -2,9 +2,45 @@
 <%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
 <%- include('_tabs', { lang, currentPath }) %>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<% if (typeof resetPassword !== 'undefined' && resetPassword) { %>
+  <div class="alert alert-success">
+    <%= lang === 'ar' ? 'كلمة المرور المؤقتة الجديدة:' : 'New temporary password:' %> <code><%= resetPassword %></code>
+    <div class="small"><%= lang === 'ar' ? 'سيُطلب من المستخدم تغييرها عند الدخول التالي.' : 'The user will be required to change it at their next login.' %></div>
+  </div>
+<% } %>
+
+<% if (importResult) { %>
+  <div class="alert <%= importResult.errors.length ? 'alert-warning' : 'alert-success' %>">
+    <%= lang === 'ar' ? 'تم إنشاء' : 'Created' %> <strong><%= importResult.created %></strong> <%= lang === 'ar' ? 'موظف.' : 'employee(s).' %>
+    <% if (importResult.errors.length) { %>
+      <ul class="mb-0 small mt-2">
+        <% importResult.errors.forEach(function(e) { %><li><%= e %></li><% }) %>
+      </ul>
+    <% } %>
+  </div>
+<% } %>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <h3 class="h5 mb-0"><%= lang === 'ar' ? 'الموظفون والمستخدمون' : 'Employees & users' %></h3>
-  <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-emp">+ <%= lang === 'ar' ? 'موظف جديد' : 'New employee' %></button>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#bulk-import">📄 <%= lang === 'ar' ? 'استيراد Excel' : 'Bulk import (Excel)' %></button>
+    <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-emp">+ <%= lang === 'ar' ? 'موظف جديد' : 'New employee' %></button>
+  </div>
+</div>
+
+<div class="collapse mb-3" id="bulk-import">
+  <form method="POST" action="/settings/users/bulk-import" enctype="multipart/form-data" class="card card-body">
+    <p class="small text-muted">
+      <%= lang === 'ar'
+        ? 'ارفع ملف Excel يحتوي على أعمدة: employee_code, name_en, name_ar, department, job_title, job_grade, direct_manager_code, joining_date, gross_salary, create_account.'
+        : 'Upload an Excel file with columns: employee_code, name_en, name_ar, department, job_title, job_grade, direct_manager_code, joining_date, gross_salary, create_account.' %>
+      <a href="/settings/users/bulk-import-template.xlsx"><%= lang === 'ar' ? 'تنزيل نموذج' : 'Download template' %></a>
+    </p>
+    <div class="row g-2">
+      <div class="col-md-9"><input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required></div>
+      <div class="col-md-3"><button type="submit" class="btn btn-sm btn-primary w-100"><%= lang === 'ar' ? 'استيراد' : 'Import' %></button></div>
+    </div>
+  </form>
 </div>
 
 <div class="collapse mb-3" id="new-emp">
@@ -19,7 +55,12 @@
           <% departments.forEach(function(d) { %><option value="<%= d.id %>"><%= lang === 'ar' ? d.name_ar : d.name_en %></option><% }) %>
         </select>
       </div>
-      <div class="col-md-3"><input name="jobTitle" class="form-control form-control-sm" placeholder="Job title"></div>
+      <div class="col-md-3">
+        <select name="jobTitle" class="form-select form-select-sm">
+          <option value="">-- Position --</option>
+          <% positions.forEach(function(p) { %><option value="<%= p.name_en %>"><%= lang === 'ar' ? p.name_ar : p.name_en %></option><% }) %>
+        </select>
+      </div>
       <div class="col-md-3"><input name="jobGrade" class="form-control form-control-sm" placeholder="Job grade"></div>
       <div class="col-md-3">
         <select name="directManagerId" class="form-select form-select-sm">
@@ -55,9 +96,13 @@
               <% } %>
             </td>
             <td class="text-end">
+              <a href="/settings/users/<%= e.id %>/edit" class="btn btn-sm btn-outline-secondary"><%= t(lang, 'common.edit') %></a>
               <% if (e.user_id) { %>
                 <form method="POST" action="/settings/users/<%= e.user_id %>/unlock" class="d-inline">
                   <button class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'إلغاء القفل' : 'Unlock' %></button>
+                </form>
+                <form method="POST" action="/settings/users/<%= e.user_id %>/reset-password" class="d-inline" onsubmit="return confirm('<%= lang === 'ar' ? 'إعادة تعيين كلمة المرور؟' : 'Reset this user\'s password?' %>');">
+                  <button class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'إعادة تعيين كلمة المرور' : 'Reset password' %></button>
                 </form>
                 <form method="POST" action="/settings/users/<%= e.user_id %>/toggle-active" class="d-inline">
                   <button class="btn btn-sm btn-outline-danger"><%= e.user_active ? (lang === 'ar' ? 'تعطيل' : 'Deactivate') : (lang === 'ar' ? 'تفعيل' : 'Activate') %></button>

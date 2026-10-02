@@ -34,14 +34,94 @@ async function sendWorkbook(res: any, filename: string, build: (wb: ExcelJS.Work
   res.end();
 }
 
-// 1. Leave balance by employee / department
-reportsRouter.get("/reports/leave-balance.xlsx", requireRole("hr_officer", "system_admin"), async (_req, res) => {
+interface LeaveBalanceReportRow {
+  employee: Employee;
+  deptEn: string;
+  deptAr: string;
+  fullYearEntitlement: number;
+  accruedToDate: number;
+  carriedOver: number;
+  taken: number;
+  pending: number;
+  remainingNow: number; // accrued-based: what they can actually take today
+  remainingFullYear: number; // full-year-based: entitlement - taken - pending, ignoring partial accrual
+}
+
+/** Shared by the Excel export and the HTML admin page (SC-11 / the "employee leaves" admin view). */
+function computeAllEmployeeLeaveBalances(): LeaveBalanceReportRow[] {
   const employees = asRow<Employee[]>(
     db.prepare("SELECT * FROM employees WHERE status = 'active' ORDER BY name_en").all()
   );
-  const annualType = db.prepare("SELECT id FROM leave_types WHERE name_en = 'Annual leave'").get() as { id: number };
+  const annualType = db
+    .prepare("SELECT id FROM leave_types WHERE name_en = 'Annual leave'")
+    .get() as { id: number };
   const rules = getEntitlementRules();
   const asOf = new Date().toISOString().slice(0, 10);
+
+  return employees.map((emp) => {
+    const dept = emp.department_id
+      ? (db.prepare("SELECT name_en, name_ar FROM departments WHERE id = ?").get(emp.department_id) as any)
+      : null;
+    const pending = getPendingLeaveDays(emp.id, annualType.id);
+    const prelim = computeLeaveBalance({
+      employee: emp,
+      asOf,
+      entitlementRules: rules,
+      carriedOver: 0,
+      taken: 0,
+      pending,
+      manualAdjustment: 0,
+    });
+    const row = getOrCreateLeaveBalanceRow(
+      emp.id,
+      annualType.id,
+      prelim.leaveYearStart,
+      prelim.leaveYearEnd,
+      prelim.fullYearEntitlement
+    );
+    const balance = computeLeaveBalance({
+      employee: emp,
+      asOf,
+      entitlementRules: rules,
+      carriedOver: row.carried_over,
+      taken: row.taken,
+      pending,
+      manualAdjustment: row.manual_adjustment,
+    });
+    return {
+      employee: emp,
+      deptEn: dept?.name_en ?? "",
+      deptAr: dept?.name_ar ?? "",
+      fullYearEntitlement: balance.fullYearEntitlement,
+      accruedToDate: balance.accruedToDate,
+      carriedOver: balance.carriedOver,
+      taken: balance.taken,
+      pending: balance.pending,
+      remainingNow: balance.remaining,
+      remainingFullYear:
+        balance.fullYearEntitlement + balance.carriedOver - balance.taken - balance.pending,
+    };
+  });
+}
+
+// SC-11 HTML view: leave balance by employee, for the admin to browse without downloading Excel.
+reportsRouter.get(
+  "/reports/leave-balances",
+  requireRole("hr_officer", "system_admin"),
+  (req, res) => {
+    const lang = req.session.user!.language;
+    const rows = computeAllEmployeeLeaveBalances();
+    res.render("reports/leave-balances", {
+      title: lang === "ar" ? "أرصدة إجازات الموظفين" : "Employee leave balances",
+      lang,
+      rows,
+    });
+  }
+);
+
+// 1. Leave balance by employee / department
+reportsRouter.get("/reports/leave-balance.xlsx", requireRole("hr_officer", "system_admin"), async (_req, res) => {
+  const rows = computeAllEmployeeLeaveBalances();
 
   await sendWorkbook(res, "leave-balance.xlsx", (wb) => {
     const sheet = wb.addWorksheet("Leave balance");
@@ -54,42 +134,21 @@ reportsRouter.get("/reports/leave-balance.xlsx", requireRole("hr_officer", "syst
       { header: "Carried over", key: "carried", width: 14 },
       { header: "Taken", key: "taken", width: 10 },
       { header: "Pending", key: "pending", width: 10 },
-      { header: "Remaining", key: "remaining", width: 12 },
+      { header: "Remaining (accrued)", key: "remainingNow", width: 16 },
+      { header: "Remaining (full year)", key: "remainingFullYear", width: 16 },
     ];
-    for (const emp of employees) {
-      const dept = emp.department_id
-        ? (db.prepare("SELECT name_en FROM departments WHERE id = ?").get(emp.department_id) as any)
-        : null;
-      const pending = getPendingLeaveDays(emp.id, annualType.id);
-      const prelim = computeLeaveBalance({
-        employee: emp,
-        asOf,
-        entitlementRules: rules,
-        carriedOver: 0,
-        taken: 0,
-        pending,
-        manualAdjustment: 0,
-      });
-      const row = getOrCreateLeaveBalanceRow(emp.id, annualType.id, prelim.leaveYearStart, prelim.leaveYearEnd, prelim.fullYearEntitlement);
-      const balance = computeLeaveBalance({
-        employee: emp,
-        asOf,
-        entitlementRules: rules,
-        carriedOver: row.carried_over,
-        taken: row.taken,
-        pending,
-        manualAdjustment: row.manual_adjustment,
-      });
+    for (const r of rows) {
       sheet.addRow({
-        code: emp.employee_code,
-        name: emp.name_en,
-        dept: dept?.name_en ?? "",
-        ent: balance.fullYearEntitlement,
-        accrued: balance.accruedToDate,
-        carried: balance.carriedOver,
-        taken: balance.taken,
-        pending: balance.pending,
-        remaining: balance.remaining,
+        code: r.employee.employee_code,
+        name: r.employee.name_en,
+        dept: r.deptEn,
+        ent: r.fullYearEntitlement,
+        accrued: r.accruedToDate,
+        carried: r.carriedOver,
+        taken: r.taken,
+        pending: r.pending,
+        remainingNow: r.remainingNow,
+        remainingFullYear: r.remainingFullYear,
       });
     }
   });

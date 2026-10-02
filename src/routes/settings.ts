@@ -1,4 +1,6 @@
 import { Router } from "express";
+import multer from "multer";
+import ExcelJS from "exceljs";
 import { db, asRow } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { hashPassword, generateTemporaryPassword } from "../utils/password";
@@ -14,6 +16,8 @@ import type {
   ApproverType,
   OrgRole,
 } from "../models/types";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 export const settingsRouter = Router();
 
@@ -409,6 +413,34 @@ settingsRouter.post("/settings/holidays/:id/delete", (req, res) => {
   res.redirect("/settings/holidays");
 });
 
+// --- Positions (reusable dropdown for job title, and later job-grade exceptions) ---
+
+settingsRouter.get("/settings/positions", (req, res) => {
+  const lang = req.session.user!.language;
+  const positions = db.prepare("SELECT * FROM positions ORDER BY name_en").all();
+  res.render("settings/positions", {
+    title: lang === "ar" ? "الإعدادات" : "Settings",
+    lang,
+    positions,
+  });
+});
+
+settingsRouter.post("/settings/positions", (req, res) => {
+  const body = req.body as Record<string, string>;
+  const result = db
+    .prepare("INSERT INTO positions (name_en, name_ar) VALUES (?, ?)")
+    .run(body.nameEn, body.nameAr);
+  audit(req, "create_position", "positions", Number(result.lastInsertRowid), null, body);
+  res.redirect("/settings/positions");
+});
+
+settingsRouter.post("/settings/positions/:id/delete", (req, res) => {
+  const id = Number(req.params.id);
+  db.prepare("UPDATE positions SET is_active = 0 WHERE id = ?").run(id);
+  audit(req, "deactivate_position", "positions", id, null, null);
+  res.redirect("/settings/positions");
+});
+
 // --- Employees & users ---------------------------------------------------------
 
 settingsRouter.get("/settings/users", (req, res) => {
@@ -423,12 +455,219 @@ settingsRouter.get("/settings/users", (req, res) => {
     )
     .all();
   const departments = asRow<Department[]>(db.prepare("SELECT * FROM departments ORDER BY name_en").all());
+  const positions = db.prepare("SELECT * FROM positions WHERE is_active = 1 ORDER BY name_en").all();
   res.render("settings/users", {
     title: lang === "ar" ? "الإعدادات" : "Settings",
     lang,
     employees,
     departments,
+    positions,
+    importResult: req.query.imported
+      ? { created: Number(req.query.imported), errors: req.query.errors ? JSON.parse(String(req.query.errors)) : [] }
+      : null,
+    resetPassword: req.query.resetPassword ? String(req.query.resetPassword) : null,
   });
+});
+
+settingsRouter.get("/settings/users/:employeeId/edit", (req, res) => {
+  const lang = req.session.user!.language;
+  const employeeId = Number(req.params.employeeId);
+  const employee = asRow<Employee | undefined>(
+    db.prepare("SELECT * FROM employees WHERE id = ?").get(employeeId)
+  );
+  if (!employee) {
+    res.status(404).render("errors/404", { title: "Not found" });
+    return;
+  }
+  const departments = asRow<Department[]>(db.prepare("SELECT * FROM departments ORDER BY name_en").all());
+  const positions = db.prepare("SELECT * FROM positions WHERE is_active = 1 ORDER BY name_en").all();
+  const employees = asRow<Employee[]>(
+    db.prepare("SELECT * FROM employees WHERE id != ? ORDER BY name_en").all(employeeId)
+  );
+  res.render("settings/edit-employee", {
+    title: lang === "ar" ? "تعديل موظف" : "Edit employee",
+    lang,
+    employee,
+    departments,
+    positions,
+    employees,
+  });
+});
+
+settingsRouter.post("/settings/users/:employeeId/edit", (req, res) => {
+  const employeeId = Number(req.params.employeeId);
+  const body = req.body as Record<string, string>;
+  const old = db.prepare("SELECT * FROM employees WHERE id = ?").get(employeeId);
+
+  db.prepare(
+    `UPDATE employees SET name_en=?, name_ar=?, department_id=?, job_title=?, job_grade=?,
+       direct_manager_id=?, joining_date=?, gross_salary=?, status=?, updated_at=datetime('now')
+     WHERE id = ?`
+  ).run(
+    body.nameEn,
+    body.nameAr,
+    body.departmentId ? Number(body.departmentId) : null,
+    body.jobTitle || null,
+    body.jobGrade || null,
+    body.directManagerId ? Number(body.directManagerId) : null,
+    body.joiningDate,
+    body.grossSalary ? Number(body.grossSalary) : null,
+    body.status || "active",
+    employeeId
+  );
+
+  audit(req, "update_employee", "employees", employeeId, old, body);
+  res.redirect("/settings/users");
+});
+
+settingsRouter.post("/settings/users/:userId/reset-password", requireRole("system_admin"), async (req, res) => {
+  const userId = Number(req.params.userId);
+  const tempPassword = generateTemporaryPassword();
+  const hash = await hashPassword(tempPassword);
+  db.prepare(
+    "UPDATE users SET password_hash = ?, must_change_password = 1, failed_login_count = 0, locked_until = NULL WHERE id = ?"
+  ).run(hash, userId);
+  audit(req, "reset_password", "users", userId, null, null);
+  res.redirect(`/settings/users?resetPassword=${encodeURIComponent(tempPassword)}&resetUserId=${userId}`);
+});
+
+settingsRouter.post(
+  "/settings/users/bulk-import",
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file) {
+      res.redirect("/settings/users");
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer as unknown as ArrayBuffer);
+    const sheet = workbook.worksheets[0];
+
+    const departments = asRow<Department[]>(db.prepare("SELECT * FROM departments").all());
+    const deptByName = new Map(departments.map((d) => [d.name_en.toLowerCase(), d.id]));
+
+    let created = 0;
+    const errors: string[] = [];
+
+    // Expected header row: employee_code, name_en, name_ar, department, job_title,
+    // job_grade, direct_manager_code, joining_date, gross_salary, create_account (yes/no)
+    for (let i = 2; i <= sheet.rowCount; i++) {
+      const row = sheet.getRow(i);
+      const employeeCode = String(row.getCell(1).value ?? "").trim();
+      if (!employeeCode) continue;
+
+      try {
+        const nameEn = String(row.getCell(2).value ?? "").trim();
+        const nameAr = String(row.getCell(3).value ?? "").trim();
+        const deptName = String(row.getCell(4).value ?? "").trim();
+        const jobTitle = String(row.getCell(5).value ?? "").trim();
+        const jobGrade = String(row.getCell(6).value ?? "").trim();
+        const managerCode = String(row.getCell(7).value ?? "").trim();
+        const joiningDateRaw = row.getCell(8).value;
+        const joiningDate =
+          joiningDateRaw instanceof Date
+            ? joiningDateRaw.toISOString().slice(0, 10)
+            : String(joiningDateRaw ?? "").trim();
+        const grossSalary = Number(row.getCell(9).value) || null;
+        const createAccount = String(row.getCell(10).value ?? "")
+          .trim()
+          .toLowerCase();
+
+        if (!nameEn || !joiningDate) {
+          errors.push(`Row ${i} (${employeeCode}): missing required name or joining date.`);
+          continue;
+        }
+
+        const existing = db
+          .prepare("SELECT id FROM employees WHERE employee_code = ?")
+          .get(employeeCode);
+        if (existing) {
+          errors.push(`Row ${i} (${employeeCode}): employee code already exists, skipped.`);
+          continue;
+        }
+
+        const departmentId = deptName ? deptByName.get(deptName.toLowerCase()) ?? null : null;
+        const manager = managerCode
+          ? (db.prepare("SELECT id FROM employees WHERE employee_code = ?").get(managerCode) as
+              | { id: number }
+              | undefined)
+          : null;
+
+        const result = db
+          .prepare(
+            `INSERT INTO employees
+              (employee_code, name_en, name_ar, department_id, job_title, job_grade, direct_manager_id, joining_date, gross_salary, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
+          )
+          .run(
+            employeeCode,
+            nameEn,
+            nameAr || nameEn,
+            departmentId,
+            jobTitle || null,
+            jobGrade || null,
+            manager?.id ?? null,
+            joiningDate,
+            grossSalary
+          );
+        const newEmployeeId = Number(result.lastInsertRowid);
+
+        if (createAccount === "yes" || createAccount === "y" || createAccount === "true") {
+          const hash = await hashPassword(generateTemporaryPassword());
+          db.prepare(
+            `INSERT INTO users (employee_id, username, password_hash, must_change_password, is_active)
+             VALUES (?, ?, ?, 1, 1)`
+          ).run(newEmployeeId, employeeCode, hash);
+        }
+
+        created++;
+      } catch (err) {
+        errors.push(`Row ${i} (${employeeCode}): ${(err as Error).message}`);
+      }
+    }
+
+    audit(req, "bulk_import_employees", "employees", null, null, { created, errorCount: errors.length });
+    res.redirect(
+      `/settings/users?imported=${created}&errors=${encodeURIComponent(JSON.stringify(errors.slice(0, 20)))}`
+    );
+  }
+);
+
+settingsRouter.get("/settings/users/bulk-import-template.xlsx", async (_req, res) => {
+  const wb = new ExcelJS.Workbook();
+  const sheet = wb.addWorksheet("Employees");
+  sheet.columns = [
+    { header: "employee_code", key: "code", width: 14 },
+    { header: "name_en", key: "nameEn", width: 22 },
+    { header: "name_ar", key: "nameAr", width: 22 },
+    { header: "department", key: "dept", width: 16 },
+    { header: "job_title", key: "jobTitle", width: 20 },
+    { header: "job_grade", key: "jobGrade", width: 14 },
+    { header: "direct_manager_code", key: "manager", width: 18 },
+    { header: "joining_date", key: "joining", width: 14 },
+    { header: "gross_salary", key: "salary", width: 14 },
+    { header: "create_account", key: "createAccount", width: 14 },
+  ];
+  sheet.addRow({
+    code: "RMC-2001",
+    nameEn: "Example Employee",
+    nameAr: "موظف مثال",
+    dept: "Laboratory",
+    jobTitle: "Lab Technician",
+    jobGrade: "Staff",
+    manager: "RMC-1000",
+    joining: "2026-01-01",
+    salary: 7000,
+    createAccount: "yes",
+  });
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", 'attachment; filename="employee-import-template.xlsx"');
+  await wb.xlsx.write(res);
+  res.end();
 });
 
 settingsRouter.post("/settings/users", async (req, res) => {

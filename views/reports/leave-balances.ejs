@@ -1,0 +1,52 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1"><%= lang === 'ar' ? 'أرصدة إجازات الموظفين' : 'Employee leave balances' %></h2>
+    <p class="text-muted small mb-0">
+      <%= lang === 'ar'
+        ? 'المتراكم حتى الآن = ما يمكن استخدامه اليوم فعلياً. المتبقي للعام الكامل = الرصيد الكامل بافتراض اكتمال التراكم هذا العام.'
+        : '"Remaining (accrued)" is what can actually be used today. "Remaining (full year)" assumes the full year accrues.' %>
+    </p>
+  </div>
+  <a href="/reports/leave-balance.xlsx" class="btn btn-sm btn-outline-primary"><%= lang === 'ar' ? 'تنزيل Excel' : 'Download Excel' %></a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="text-muted small">
+          <tr>
+            <th><%= lang === 'ar' ? 'الموظف' : 'Employee' %></th>
+            <th><%= lang === 'ar' ? 'القسم' : 'Department' %></th>
+            <th><%= lang === 'ar' ? 'المستحق السنوي' : 'Paid leave (entitlement)' %></th>
+            <th><%= lang === 'ar' ? 'المتراكم' : 'Accrued' %></th>
+            <th><%= lang === 'ar' ? 'المستخدم' : 'Taken' %></th>
+            <th><%= lang === 'ar' ? 'قيد الموافقة' : 'Pending' %></th>
+            <th><%= lang === 'ar' ? 'المتبقي حتى الآن' : 'Remaining (now)' %></th>
+            <th><%= lang === 'ar' ? 'المتبقي للعام الكامل' : 'Remaining (full year)' %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach(function(r) { %>
+            <tr>
+              <td><%= lang === 'ar' ? r.employee.name_ar : r.employee.name_en %> <span class="text-muted small"><%= r.employee.employee_code %></span></td>
+              <td><%= lang === 'ar' ? r.deptAr : r.deptEn %></td>
+              <td><%= r.fullYearEntitlement %></td>
+              <td><%= r.accruedToDate %></td>
+              <td><%= r.taken %></td>
+              <td><%= r.pending %></td>
+              <td class="fw-semibold"><%= r.remainingNow %></td>
+              <td><%= r.remainingFullYear %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>
