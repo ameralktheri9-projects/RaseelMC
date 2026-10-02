@@ -1,0 +1,73 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h3 class="h5 mb-3"><%= lang === 'ar' ? 'جدول الاستحقاق السنوي (حسب سنوات الخدمة)' : 'Annual entitlement table (by years of service)' %></h3>
+    <form method="POST" action="/settings/entitlement-rules">
+      <table class="table table-sm">
+        <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'أقل سنوات خدمة' : 'Min years of service' %></th><th><%= lang === 'ar' ? 'الأيام السنوية' : 'Annual days' %></th></tr></thead>
+        <tbody>
+          <% entitlementRules.forEach(function(r) { %>
+            <tr>
+              <td><input type="number" step="0.5" name="minYears" value="<%= r.min_years_service %>" class="form-control form-control-sm"></td>
+              <td><input type="number" name="annualDays" value="<%= r.annual_days %>" class="form-control form-control-sm"></td>
+            </tr>
+          <% }) %>
+          <tr><td><input type="number" step="0.5" name="minYears" class="form-control form-control-sm" placeholder="e.g. 10"></td><td><input type="number" name="annualDays" class="form-control form-control-sm"></td></tr>
+        </tbody>
+      </table>
+      <button type="submit" class="btn btn-sm btn-primary"><%= t(lang, 'common.save') %></button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="h5 mb-0"><%= lang === 'ar' ? 'أنواع الإجازات' : 'Leave types' %></h3>
+      <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-lt">+ <%= lang === 'ar' ? 'جديد' : 'New' %></button>
+    </div>
+
+    <div class="collapse mb-3" id="new-lt">
+      <form method="POST" action="/settings/leave-types" class="card card-body">
+        <div class="row g-2">
+          <div class="col-md-3"><input name="nameEn" class="form-control form-control-sm" placeholder="Name (EN)" required></div>
+          <div class="col-md-3"><input name="nameAr" class="form-control form-control-sm" placeholder="الاسم" dir="rtl" required></div>
+          <div class="col-md-2"><input type="number" name="annualDays" class="form-control form-control-sm" placeholder="Days/year"></div>
+          <div class="col-md-2">
+            <select name="accrualMethod" class="form-select form-select-sm">
+              <option value="upfront">Upfront</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="col-md-2"><button class="btn btn-sm btn-primary w-100" type="submit"><%= t(lang, 'common.save') %></button></div>
+        </div>
+        <div class="d-flex gap-3 mt-2 small">
+          <label><input type="checkbox" name="isPaid" checked> <%= lang === 'ar' ? 'مدفوعة' : 'Paid' %></label>
+          <label><input type="checkbox" name="requiresAttachment"> <%= lang === 'ar' ? 'يتطلب مرفق' : 'Requires attachment' %></label>
+          <label><input type="checkbox" name="allowsNegativeBalance"> <%= lang === 'ar' ? 'يسمح برصيد سالب' : 'Allows negative balance' %></label>
+        </div>
+      </form>
+    </div>
+
+    <table class="table table-sm align-middle">
+      <thead class="text-muted small"><tr><th>Name</th><th>Paid</th><th>Days/yr</th><th>Attachment</th><th>Status</th></tr></thead>
+      <tbody>
+        <% leaveTypes.forEach(function(lt) { %>
+          <tr>
+            <td><%= lang === 'ar' ? lt.name_ar : lt.name_en %></td>
+            <td><%= lt.is_paid ? (lang === 'ar' ? 'نعم' : 'Yes') : (lang === 'ar' ? 'لا' : 'No') %></td>
+            <td><%= lt.annual_days ?? '-' %></td>
+            <td><%= lt.requires_attachment ? (lang === 'ar' ? 'مطلوب' : 'Required') : '-' %></td>
+            <td><span class="badge <%= lt.is_active ? 'bg-success' : 'bg-secondary' %>"><%= lt.is_active ? t(lang,'common.active') : t(lang,'common.inactive') %></span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

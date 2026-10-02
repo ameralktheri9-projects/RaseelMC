@@ -1,0 +1,178 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h3 class="h6 mb-0"><%= lang === 'ar' ? 'المسارات' : 'Workflows' %></h3>
+      <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-wf">+ <%= lang === 'ar' ? 'جديد' : 'New' %></button>
+    </div>
+
+    <div class="collapse mb-3" id="new-wf">
+      <div class="card card-body">
+        <form method="POST" action="/settings/workflows">
+          <input class="form-control form-control-sm mb-2" name="nameEn" placeholder="Name (English)" required>
+          <input class="form-control form-control-sm mb-2" name="nameAr" placeholder="الاسم (عربي)" required dir="rtl">
+          <select class="form-select form-select-sm mb-2" name="requestType" required>
+            <option value="leave">Leave</option>
+            <option value="loan">Loan</option>
+          </select>
+          <button class="btn btn-sm btn-primary w-100" type="submit"><%= lang === 'ar' ? 'إنشاء' : 'Create' %></button>
+        </form>
+      </div>
+    </div>
+
+    <div class="list-group">
+      <% ['leave','loan'].forEach(function(rt) { %>
+        <div class="list-group-item bg-light text-muted small fw-semibold"><%= rt === 'leave' ? (lang === 'ar' ? 'الإجازة' : 'LEAVE') : (lang === 'ar' ? 'السلفة' : 'LOAN') %></div>
+        <% workflows.filter(function(w){ return w.request_type === rt; }).forEach(function(w) { %>
+          <a href="/settings/workflows?id=<%= w.id %>" class="list-group-item list-group-item-action <%= selected && selected.id === w.id ? 'active' : '' %>">
+            <%= lang === 'ar' ? w.name_ar : w.name_en %>
+            <% if (w.is_default) { %><span class="badge bg-secondary ms-1"><%= lang === 'ar' ? 'افتراضي' : 'default' %></span><% } %>
+            <% if (!w.is_active) { %><span class="badge bg-light text-muted ms-1"><%= lang === 'ar' ? 'معطل' : 'inactive' %></span><% } %>
+          </a>
+        <% }) %>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <% if (!selected) { %>
+      <div class="card"><div class="card-body text-muted"><%= lang === 'ar' ? 'اختر مساراً من القائمة.' : 'Select a workflow from the list.' %></div></div>
+    <% } else { %>
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h3 class="h5 mb-0"><%= lang === 'ar' ? selected.name_ar : selected.name_en %></h3>
+              <p class="text-muted small mb-0"><%= lang === 'ar' ? 'إصدار' : 'Version' %> <%= selected.version %></p>
+            </div>
+            <% if (!selected.is_default) { %>
+              <form method="POST" action="/settings/workflows/<%= selected.id %>/default">
+                <button class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'جعله الافتراضي' : 'Make default' %></button>
+              </form>
+            <% } %>
+          </div>
+
+          <form method="POST" action="/settings/workflows/<%= selected.id %>">
+            <div class="row mb-2">
+              <div class="col-md-6"><input class="form-control form-control-sm" name="nameEn" value="<%= selected.name_en %>" placeholder="Name (EN)"></div>
+              <div class="col-md-6"><input class="form-control form-control-sm" name="nameAr" value="<%= selected.name_ar %>" placeholder="الاسم" dir="rtl"></div>
+            </div>
+
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" name="isActive" id="isActive" <%= selected.is_active ? 'checked' : '' %>>
+              <label class="form-check-label small" for="isActive"><%= lang === 'ar' ? 'نشط' : 'Active' %></label>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" name="skipDuplicateApprover" id="skipDup" <%= selected.skip_duplicate_approver ? 'checked' : '' %>>
+              <label class="form-check-label small" for="skipDup"><%= lang === 'ar' ? 'تخطي الخطوة تلقائياً إذا كان المعتمد هو مقدّم الطلب أو نفس معتمد الخطوة السابقة' : 'Skip a step automatically when its approver is the requester or the previous step\'s approver' %></label>
+            </div>
+
+            <% var cond = JSON.parse(selected.conditions_json || '{}'); %>
+            <p class="small text-muted mb-1"><%= lang === 'ar' ? 'شروط الانطباق (اتركها فارغة لتجاهلها)' : 'Applies when (leave blank to ignore)' %></p>
+            <div class="row mb-3">
+              <div class="col-3"><input type="number" class="form-control form-control-sm" name="condMinDays" value="<%= cond.minDays || '' %>" placeholder="<%= lang === 'ar' ? 'أقل أيام' : 'Min days' %>"></div>
+              <div class="col-3"><input type="number" class="form-control form-control-sm" name="condMaxDays" value="<%= cond.maxDays || '' %>" placeholder="<%= lang === 'ar' ? 'أقصى أيام' : 'Max days' %>"></div>
+              <div class="col-3"><input type="number" class="form-control form-control-sm" name="condMinAmount" value="<%= cond.minAmount || '' %>" placeholder="<%= lang === 'ar' ? 'أقل مبلغ' : 'Min amount' %>"></div>
+              <div class="col-3"><input type="number" class="form-control form-control-sm" name="condMaxAmount" value="<%= cond.maxAmount || '' %>" placeholder="<%= lang === 'ar' ? 'أقصى مبلغ' : 'Max amount' %>"></div>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary"><%= t(lang, 'common.save') %></button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h4 class="h6 mb-3"><%= lang === 'ar' ? 'خطوات الموافقة' : 'Approval steps' %></h4>
+          <div class="text-muted small mb-2"><%= lang === 'ar' ? 'الموظف يقدّم الطلب' : 'Employee submits the request' %> &darr;</div>
+
+          <% steps.forEach(function(s, i) { %>
+            <div class="border rounded p-2 mb-2 d-flex align-items-center gap-2 <%= s.is_final ? 'border-primary' : '' %>">
+              <span class="badge bg-secondary"><%= s.step_order %></span>
+              <div class="flex-grow-1 small">
+                <% if (s.approver_type === 'direct_manager') { %>
+                  <%= lang === 'ar' ? 'المدير المباشر' : 'Direct manager' %>
+                <% } else if (s.approver_type === 'department_head') { %>
+                  <%= lang === 'ar' ? 'رئيس القسم' : 'Department head' %>
+                <% } else if (s.approver_type === 'org_role') { %>
+                  <%= lang === 'ar' ? 'دور: ' : 'Role: ' %><%= s.approver_org_role %>
+                <% } else { %>
+                  <% var u = users.find(function(uu){ return uu.id === s.approver_user_id; }); %>
+                  <%= lang === 'ar' ? 'مستخدم محدد: ' : 'Specific user: ' %><%= u ? u.username : s.approver_user_id %>
+                <% } %>
+                &middot; SLA <%= s.sla_days %>d
+                <% if (s.is_final) { %><span class="badge bg-primary ms-1"><%= lang === 'ar' ? 'المعتمد الأخير' : 'FINAL APPROVER' %></span><% } %>
+              </div>
+              <form method="POST" action="/settings/workflows/<%= selected.id %>/steps/<%= s.id %>/move" class="d-inline">
+                <input type="hidden" name="direction" value="up">
+                <button class="btn btn-sm btn-outline-secondary" <%= i === 0 ? 'disabled' : '' %>>&uarr;</button>
+              </form>
+              <form method="POST" action="/settings/workflows/<%= selected.id %>/steps/<%= s.id %>/move" class="d-inline">
+                <input type="hidden" name="direction" value="down">
+                <button class="btn btn-sm btn-outline-secondary" <%= i === steps.length - 1 ? 'disabled' : '' %>>&darr;</button>
+              </form>
+              <form method="POST" action="/settings/workflows/<%= selected.id %>/steps/<%= s.id %>/delete" onsubmit="return confirm('<%= lang === 'ar' ? 'حذف هذه الخطوة؟' : 'Delete this step?' %>');">
+                <button class="btn btn-sm btn-outline-danger">&times;</button>
+              </form>
+            </div>
+          <% }) %>
+
+          <form method="POST" action="/settings/workflows/<%= selected.id %>/steps" class="border rounded p-2 mt-3 bg-light">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small mb-1"><%= lang === 'ar' ? 'نوع المعتمد' : 'Approver type' %></label>
+                <select name="approverType" class="form-select form-select-sm" id="approverTypeSelect">
+                  <option value="direct_manager"><%= lang === 'ar' ? 'المدير المباشر' : 'Direct manager' %></option>
+                  <option value="department_head"><%= lang === 'ar' ? 'رئيس القسم' : 'Department head' %></option>
+                  <option value="org_role"><%= lang === 'ar' ? 'دور' : 'Role' %></option>
+                  <option value="specific_user"><%= lang === 'ar' ? 'مستخدم محدد' : 'Specific user' %></option>
+                </select>
+              </div>
+              <div class="col-md-4" id="orgRoleField">
+                <label class="form-label small mb-1"><%= lang === 'ar' ? 'الدور' : 'Role' %></label>
+                <select name="approverOrgRole" class="form-select form-select-sm">
+                  <option value="hr_manager">HR Manager</option>
+                  <option value="finance_manager">Finance Manager</option>
+                  <option value="ceo">CEO</option>
+                  <option value="medical_director">Medical Director</option>
+                </select>
+              </div>
+              <div class="col-md-4 d-none" id="userField">
+                <label class="form-label small mb-1"><%= lang === 'ar' ? 'المستخدم' : 'User' %></label>
+                <select name="approverUserId" class="form-select form-select-sm">
+                  <% users.forEach(function(u) { %><option value="<%= u.id %>"><%= u.username %></option><% }) %>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small mb-1">SLA</label>
+                <input type="number" name="slaDays" value="2" class="form-control form-control-sm">
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100">+ <%= lang === 'ar' ? 'إضافة خطوة' : 'Add step' %></button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sel = document.getElementById('approverTypeSelect');
+  if (!sel) return;
+  var orgField = document.getElementById('orgRoleField');
+  var userField = document.getElementById('userField');
+  sel.addEventListener('change', function () {
+    orgField.classList.toggle('d-none', sel.value !== 'org_role');
+    userField.classList.toggle('d-none', sel.value !== 'specific_user');
+  });
+})();
+</script>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

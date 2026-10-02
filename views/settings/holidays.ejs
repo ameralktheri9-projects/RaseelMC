@@ -1,0 +1,40 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h3 class="h5 mb-3"><%= lang === 'ar' ? 'إضافة عطلة' : 'Add holiday' %></h3>
+    <form method="POST" action="/settings/holidays" class="row g-2">
+      <div class="col-md-3"><input type="date" name="date" class="form-control" required></div>
+      <div class="col-md-4"><input name="nameEn" class="form-control" placeholder="Name (English)" required></div>
+      <div class="col-md-4"><input name="nameAr" class="form-control" placeholder="الاسم (عربي)" dir="rtl" required></div>
+      <div class="col-md-1"><button class="btn btn-primary w-100" type="submit">+</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h3 class="h5 mb-3"><%= lang === 'ar' ? 'العطلات الرسمية' : 'Official holidays' %></h3>
+    <table class="table table-sm align-middle">
+      <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'التاريخ' : 'Date' %></th><th><%= lang === 'ar' ? 'الاسم' : 'Name' %></th><th></th></tr></thead>
+      <tbody>
+        <% holidays.forEach(function(h) { %>
+          <tr>
+            <td><%= h.holiday_date %></td>
+            <td><%= lang === 'ar' ? h.name_ar : h.name_en %></td>
+            <td class="text-end">
+              <form method="POST" action="/settings/holidays/<%= h.id %>/delete">
+                <button class="btn btn-sm btn-outline-danger"><%= t(lang, 'common.delete') %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

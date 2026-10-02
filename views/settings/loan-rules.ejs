@@ -1,0 +1,110 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h3 class="h5 mb-3"><%= lang === 'ar' ? 'القواعد الافتراضية للشركة' : 'Company defaults' %></h3>
+    <form method="POST" action="/settings/loan-rules">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الحد الأقصى للمبلغ (ريال)' : 'Maximum loan amount (SAR)' %></label>
+          <input type="number" name="maxAmount" class="form-control" value="<%= defaults.max_amount ?? '' %>" placeholder="<%= lang === 'ar' ? 'لا يوجد' : 'No limit' %>">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الحد الأقصى للمدة (أشهر)' : 'Maximum repayment period (months)' %></label>
+          <input type="number" name="maxMonths" class="form-control" value="<%= defaults.max_months ?? '' %>" placeholder="<%= lang === 'ar' ? 'لا يوجد' : 'No limit' %>">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'عدد السلف المتزامنة' : 'Simultaneous active loans' %></label>
+          <input type="number" name="maxSimultaneousLoans" class="form-control" value="<%= defaults.max_simultaneous_loans ?? '' %>" placeholder="<%= lang === 'ar' ? 'لا يوجد' : 'No limit' %>">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الحد الأقصى للخصم الشهري' : 'Maximum monthly deduction' %></label>
+          <div class="input-group">
+            <input type="number" step="0.01" name="maxMonthlyDeduction" class="form-control" value="<%= defaults.max_monthly_deduction ?? '' %>">
+            <select name="maxMonthlyDeductionIsPercent" class="form-select" style="max-width: 120px;">
+              <option value="" <%= !defaults.max_monthly_deduction_is_percent ? 'selected' : '' %>><%= lang === 'ar' ? 'ريال' : 'SAR' %></option>
+              <option value="1" <%= defaults.max_monthly_deduction_is_percent ? 'selected' : '' %>>% <%= lang === 'ar' ? 'من الراتب' : 'of salary' %></option>
+            </select>
+          </div>
+          <div class="form-text"><%= lang === 'ar' ? 'نظام العمل السعودي المادة 92: تأكد مع الشؤون القانونية قبل تجاوز 10%.' : 'Saudi Labor Law Art. 92: confirm with Legal before exceeding 10%.' %></div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'فترة الانتظار بين السلف (أشهر)' : 'Waiting period between loans (months)' %></label>
+          <input type="number" name="waitingPeriodMonths" class="form-control" value="<%= defaults.waiting_period_months ?? '' %>">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'من يمكنه طلب سلفة' : 'Who can request a loan' %></label>
+          <select name="eligibility" class="form-select">
+            <option value="allowed" <%= defaults.eligibility === 'allowed' ? 'selected' : '' %>><%= lang === 'ar' ? 'جميع الموظفين' : 'All employees' %></option>
+            <option value="not_allowed" <%= defaults.eligibility === 'not_allowed' ? 'selected' : '' %>><%= lang === 'ar' ? 'لا أحد (افتراضياً)' : 'No one (by default)' %></option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary"><%= lang === 'ar' ? 'حفظ القواعد الافتراضية' : 'Save defaults' %></button>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="h5 mb-0"><%= lang === 'ar' ? 'استثناءات الموظفين' : 'Employee overrides' %></h3>
+      <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-override">+ <%= lang === 'ar' ? 'إضافة استثناء' : 'Add override' %></button>
+    </div>
+
+    <div class="collapse mb-3" id="new-override">
+      <form method="POST" action="/settings/loan-rules/overrides" class="card card-body">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <select name="employeeId" class="form-select form-select-sm" required>
+              <option value="">-- <%= lang === 'ar' ? 'اختر موظف' : 'Select employee' %> --</option>
+              <% employees.forEach(function(e) { %><option value="<%= e.id %>"><%= lang === 'ar' ? e.name_ar : e.name_en %> (<%= e.employee_code %>)</option><% }) %>
+            </select>
+          </div>
+          <div class="col-md-2"><input type="number" name="maxAmount" class="form-control form-control-sm" placeholder="<%= lang === 'ar' ? 'المبلغ' : 'Max amount' %>"></div>
+          <div class="col-md-2"><input type="number" name="maxMonths" class="form-control form-control-sm" placeholder="<%= lang === 'ar' ? 'الأشهر' : 'Max months' %>"></div>
+          <div class="col-md-2"><input type="number" step="0.01" name="maxMonthlyDeduction" class="form-control form-control-sm" placeholder="<%= lang === 'ar' ? 'الخصم الشهري' : 'Max monthly' %>"></div>
+          <div class="col-md-2">
+            <select name="eligibility" class="form-select form-select-sm">
+              <option value="allowed"><%= lang === 'ar' ? 'مسموح' : 'Allowed' %></option>
+              <option value="not_allowed"><%= lang === 'ar' ? 'غير مسموح' : 'Not allowed' %></option>
+            </select>
+          </div>
+          <div class="col-12"><input type="text" name="reason" class="form-control form-control-sm" placeholder="<%= lang === 'ar' ? 'السبب (يظهر في سجل التدقيق)' : 'Reason (shown in audit log)' %>"></div>
+          <div class="col-12"><button type="submit" class="btn btn-sm btn-primary"><%= t(lang, 'common.save') %></button></div>
+        </div>
+      </form>
+    </div>
+
+    <% if (!overrides || overrides.length === 0) { %>
+      <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد استثناءات.' : 'No overrides.' %></p>
+    <% } else { %>
+      <table class="table table-sm align-middle">
+        <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'الموظف' : 'Employee' %></th><th>Max amount</th><th>Max months</th><th>Max deduction</th><th>Eligibility</th><th></th></tr></thead>
+        <tbody>
+          <% overrides.forEach(function(o) { %>
+            <tr>
+              <td><%= lang === 'ar' ? o.name_ar : o.name_en %> <span class="text-muted small"><%= o.employee_code %></span></td>
+              <td><%= o.max_amount ?? 'Default' %></td>
+              <td><%= o.max_months ?? 'Default' %></td>
+              <td><%= o.max_monthly_deduction != null ? o.max_monthly_deduction + (o.max_monthly_deduction_is_percent ? '%' : '') : 'Default' %></td>
+              <td><span class="badge <%= o.eligibility === 'not_allowed' ? 'bg-danger' : 'bg-success' %>"><%= o.eligibility ?? 'allowed' %></span></td>
+              <td class="text-end">
+                <form method="POST" action="/settings/loan-rules/overrides/<%= o.employee_id %>/delete" class="d-inline">
+                  <button class="btn btn-sm btn-outline-danger"><%= lang === 'ar' ? 'إزالة' : 'Remove' %></button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

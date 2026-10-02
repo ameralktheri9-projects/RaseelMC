@@ -1,0 +1,52 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="card">
+  <div class="card-body">
+    <h3 class="h5 mb-1"><%= lang === 'ar' ? 'ترحيل الإجازة السنوية' : 'Annual leave carry-over' %></h3>
+    <p class="text-muted small mb-4"><%= lang === 'ar' ? 'يعمل عند انتهاء سنة الإجازة الخاصة بكل موظف. الأيام غير المستخدمة التي تتجاوز الحد تسقط.' : 'Runs on each employee\'s joining anniversary, when their leave year closes. Unused days above the limit lapse.' %></p>
+
+    <form method="POST" action="/settings/carry-over">
+      <div class="mb-3">
+        <label class="form-label fw-semibold d-block"><%= lang === 'ar' ? 'كم من الإجازة غير المستخدمة تنتقل للعام القادم؟' : 'How much unused leave moves to the next year?' %></label>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="method" value="days" id="m-days" <%= setting.method === 'days' ? 'checked' : '' %>>
+          <label class="form-check-label" for="m-days"><%= lang === 'ar' ? 'عدد أيام' : 'Number of days' %></label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="method" value="percentage" id="m-pct" <%= setting.method === 'percentage' ? 'checked' : '' %>>
+          <label class="form-check-label" for="m-pct"><%= lang === 'ar' ? 'نسبة مئوية' : 'Percentage' %></label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="method" value="none" id="m-none" <%= setting.method === 'none' ? 'checked' : '' %>>
+          <label class="form-check-label" for="m-none"><%= lang === 'ar' ? 'بدون ترحيل' : 'No carry-over' %></label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الحد الأقصى (أيام)' : 'Maximum days carried over' %></label>
+          <input type="number" step="0.5" name="maxDays" class="form-control" value="<%= setting.max_days ?? '' %>">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'النسبة %' : 'Percentage %' %></label>
+          <input type="number" step="0.1" name="percentage" class="form-control" value="<%= setting.percentage ?? '' %>">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'الحد الأقصى للنسبة (أيام)' : 'Percentage cap (days)' %></label>
+          <input type="number" step="0.5" name="percentageCapDays" class="form-control" value="<%= setting.percentage_cap_days ?? '' %>">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label small"><%= lang === 'ar' ? 'انتهاء الترحيل (أشهر)' : 'Expires after (months)' %></label>
+          <input type="number" name="expiryMonths" class="form-control" value="<%= setting.expiry_months ?? '' %>">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary"><%= t(lang, 'common.save') %></button>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

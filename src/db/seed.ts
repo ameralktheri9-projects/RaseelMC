@@ -146,14 +146,14 @@ async function seed(): Promise<void> {
 
     // Annual leave - standard (<=10 days)
     const wfAnnualStandard = insertWorkflow.run(
-      "Annual leave - standard", "إجازة سنوية - عادية", "leave", 1, JSON.stringify({ leaveTypeId: ltAnnual, maxDays: 10 })
+      "Annual leave - standard", "إجازة سنوية - عادية", "leave", 0, JSON.stringify({ leaveTypeId: ltAnnual, maxDays: 10 })
     ).lastInsertRowid as number;
     insertStep.run(wfAnnualStandard, 1, "direct_manager", null, 0, 2);
     insertStep.run(wfAnnualStandard, 2, "org_role", "hr_manager", 1, 2);
 
     // Annual leave - long (>10 days)
     const wfAnnualLong = insertWorkflow.run(
-      "Annual leave - long", "إجازة سنوية - طويلة", "leave", 1, JSON.stringify({ leaveTypeId: ltAnnual, minDays: 11 })
+      "Annual leave - long", "إجازة سنوية - طويلة", "leave", 0, JSON.stringify({ leaveTypeId: ltAnnual, minDays: 11 })
     ).lastInsertRowid as number;
     insertStep.run(wfAnnualLong, 1, "direct_manager", null, 0, 2);
     insertStep.run(wfAnnualLong, 2, "department_head", null, 0, 2);
@@ -161,14 +161,14 @@ async function seed(): Promise<void> {
 
     // Sick / emergency leave
     const wfSick = insertWorkflow.run(
-      "Sick / emergency leave", "إجازة مرضية / طارئة", "leave", 1, JSON.stringify({})
+      "Sick / emergency leave", "إجازة مرضية / طارئة", "leave", 0, JSON.stringify({})
     ).lastInsertRowid as number;
     insertStep.run(wfSick, 1, "direct_manager", null, 0, 2);
     insertStep.run(wfSick, 2, "org_role", "hr_manager", 1, 2);
 
     // Loan - standard (<= SAR 10,000)
     const wfLoanStandard = insertWorkflow.run(
-      "Loan - standard", "سلفة - عادية", "loan", 1, JSON.stringify({ maxAmount: 10000 })
+      "Loan - standard", "سلفة - عادية", "loan", 0, JSON.stringify({ maxAmount: 10000 })
     ).lastInsertRowid as number;
     insertStep.run(wfLoanStandard, 1, "direct_manager", null, 0, 2);
     insertStep.run(wfLoanStandard, 2, "org_role", "hr_manager", 0, 2);
@@ -176,7 +176,7 @@ async function seed(): Promise<void> {
 
     // Loan - high value (> SAR 10,000)
     const wfLoanHigh = insertWorkflow.run(
-      "Loan - high value", "سلفة - مبلغ مرتفع", "loan", 1, JSON.stringify({ minAmount: 10000.01 })
+      "Loan - high value", "سلفة - مبلغ مرتفع", "loan", 0, JSON.stringify({ minAmount: 10000.01 })
     ).lastInsertRowid as number;
     insertStep.run(wfLoanHigh, 1, "direct_manager", null, 0, 2);
     insertStep.run(wfLoanHigh, 2, "org_role", "hr_manager", 0, 2);

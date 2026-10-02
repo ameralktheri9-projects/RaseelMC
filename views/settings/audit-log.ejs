@@ -1,0 +1,25 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<h2 class="h5 mb-3"><%= lang === 'ar' ? 'سجل التدقيق' : 'Audit log' %></h2>
+
+<div class="card">
+  <div class="card-body">
+    <table class="table table-sm align-middle">
+      <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'المستخدم' : 'User' %></th><th><%= lang === 'ar' ? 'الإجراء' : 'Action' %></th><th><%= lang === 'ar' ? 'السجل' : 'Record' %></th><th><%= lang === 'ar' ? 'الوقت' : 'Time' %></th></tr></thead>
+      <tbody>
+        <% logs.forEach(function(l) { %>
+          <tr>
+            <td><%= l.username || '-' %></td>
+            <td><code class="small"><%= l.action %></code></td>
+            <td class="text-muted small"><%= l.record_type %><% if (l.record_id) { %> #<%= l.record_id %><% } %></td>
+            <td class="text-muted small"><%= l.created_at %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

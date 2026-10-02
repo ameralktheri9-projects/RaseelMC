@@ -1,12 +1,18 @@
 <%
+  const roles = (currentUser && currentUser.roles) || [];
+  const isAdminOrHr = roles.includes('system_admin') || roles.includes('hr_officer');
+  const isAdmin = roles.includes('system_admin');
   const navItems = [
     { href: '/dashboard', key: 'nav.dashboard', icon: '🏠', enabled: true },
     { href: '/leave', key: 'nav.myLeave', icon: '📅', enabled: true },
     { href: '/loans', key: 'nav.myLoans', icon: '💳', enabled: true },
     { href: '/approvals', key: 'nav.approvals', icon: '✅', enabled: true },
     { href: '/reports', key: 'nav.reports', icon: '📊', enabled: false },
-    { href: '/settings', key: 'nav.settings', icon: '⚙️', enabled: false },
+    { href: '/settings', key: 'nav.settings', icon: '⚙️', enabled: isAdminOrHr },
   ];
+  if (isAdmin) {
+    navItems.push({ href: '/audit-log', key: 'nav.auditLog', icon: '🧾', enabled: true });
+  }
 %>
 <div class="app-shell">
   <aside class="app-sidebar">

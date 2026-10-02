@@ -1,0 +1,8 @@
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link <%= currentPath.startsWith('/settings/workflows') ? 'active' : '' %>" href="/settings/workflows"><%= lang === 'ar' ? 'مسارات الموافقة' : 'Approval workflows' %></a></li>
+  <li class="nav-item"><a class="nav-link <%= currentPath.startsWith('/settings/carry-over') ? 'active' : '' %>" href="/settings/carry-over"><%= lang === 'ar' ? 'ترحيل الإجازة' : 'Leave carry-over' %></a></li>
+  <li class="nav-item"><a class="nav-link <%= currentPath.startsWith('/settings/leave-types') ? 'active' : '' %>" href="/settings/leave-types"><%= lang === 'ar' ? 'أنواع الإجازات' : 'Leave types' %></a></li>
+  <li class="nav-item"><a class="nav-link <%= currentPath.startsWith('/settings/loan-rules') ? 'active' : '' %>" href="/settings/loan-rules"><%= lang === 'ar' ? 'قواعد السلف' : 'Loan rules' %></a></li>
+  <li class="nav-item"><a class="nav-link <%= currentPath.startsWith('/settings/holidays') ? 'active' : '' %>" href="/settings/holidays"><%= lang === 'ar' ? 'العطلات' : 'Holidays' %></a></li>
+  <li class="nav-item"><a class="nav-link <%= currentPath.startsWith('/settings/users') ? 'active' : '' %>" href="/settings/users"><%= lang === 'ar' ? 'المستخدمون والأدوار' : 'Users and roles' %></a></li>
+</ul>

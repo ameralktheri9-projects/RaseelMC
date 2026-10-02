@@ -1,0 +1,75 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+<%- include('_tabs', { lang, currentPath }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="h5 mb-0"><%= lang === 'ar' ? 'الموظفون والمستخدمون' : 'Employees & users' %></h3>
+  <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-emp">+ <%= lang === 'ar' ? 'موظف جديد' : 'New employee' %></button>
+</div>
+
+<div class="collapse mb-3" id="new-emp">
+  <form method="POST" action="/settings/users" class="card card-body">
+    <div class="row g-2">
+      <div class="col-md-3"><input name="employeeCode" class="form-control form-control-sm" placeholder="Employee code (e.g. RMC-2001)" required></div>
+      <div class="col-md-3"><input name="nameEn" class="form-control form-control-sm" placeholder="Name (EN)" required></div>
+      <div class="col-md-3"><input name="nameAr" class="form-control form-control-sm" placeholder="الاسم" dir="rtl" required></div>
+      <div class="col-md-3">
+        <select name="departmentId" class="form-select form-select-sm">
+          <option value="">-- Department --</option>
+          <% departments.forEach(function(d) { %><option value="<%= d.id %>"><%= lang === 'ar' ? d.name_ar : d.name_en %></option><% }) %>
+        </select>
+      </div>
+      <div class="col-md-3"><input name="jobTitle" class="form-control form-control-sm" placeholder="Job title"></div>
+      <div class="col-md-3"><input name="jobGrade" class="form-control form-control-sm" placeholder="Job grade"></div>
+      <div class="col-md-3">
+        <select name="directManagerId" class="form-select form-select-sm">
+          <option value="">-- Direct manager --</option>
+          <% employees.forEach(function(e) { %><option value="<%= e.id %>"><%= lang === 'ar' ? e.name_ar : e.name_en %></option><% }) %>
+        </select>
+      </div>
+      <div class="col-md-3"><input type="date" name="joiningDate" class="form-control form-control-sm" required></div>
+      <div class="col-md-3"><input type="number" name="grossSalary" class="form-control form-control-sm" placeholder="Gross salary (SAR)"></div>
+      <div class="col-md-3 d-flex align-items-center">
+        <label class="small"><input type="checkbox" name="createAccount" checked> <%= lang === 'ar' ? 'إنشاء حساب دخول' : 'Create login account' %></label>
+      </div>
+      <div class="col-12"><button class="btn btn-sm btn-primary" type="submit"><%= lang === 'ar' ? 'إنشاء' : 'Create' %></button></div>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <table class="table table-sm align-middle">
+      <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'الموظف' : 'Employee' %></th><th><%= lang === 'ar' ? 'القسم' : 'Department' %></th><th><%= lang === 'ar' ? 'اسم المستخدم' : 'Username' %></th><th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th><th></th></tr></thead>
+      <tbody>
+        <% employees.forEach(function(e) { %>
+          <tr>
+            <td><%= lang === 'ar' ? e.name_ar : e.name_en %> <span class="text-muted small"><%= e.employee_code %></span></td>
+            <td><%= lang === 'ar' ? e.dept_ar : e.dept_en %></td>
+            <td><%= e.username || '-' %></td>
+            <td>
+              <% if (e.user_id) { %>
+                <span class="badge <%= e.user_active ? 'bg-success' : 'bg-secondary' %>"><%= e.user_active ? t(lang,'common.active') : t(lang,'common.inactive') %></span>
+              <% } else { %>
+                <span class="text-muted small"><%= lang === 'ar' ? 'لا يوجد حساب' : 'No account' %></span>
+              <% } %>
+            </td>
+            <td class="text-end">
+              <% if (e.user_id) { %>
+                <form method="POST" action="/settings/users/<%= e.user_id %>/unlock" class="d-inline">
+                  <button class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'إلغاء القفل' : 'Unlock' %></button>
+                </form>
+                <form method="POST" action="/settings/users/<%= e.user_id %>/toggle-active" class="d-inline">
+                  <button class="btn btn-sm btn-outline-danger"><%= e.user_active ? (lang === 'ar' ? 'تعطيل' : 'Deactivate') : (lang === 'ar' ? 'تفعيل' : 'Activate') %></button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>
