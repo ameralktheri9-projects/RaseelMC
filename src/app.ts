@@ -12,6 +12,7 @@ import { approvalsRouter } from "./routes/approvals";
 import { loansRouter } from "./routes/loans";
 import { settingsRouter } from "./routes/settings";
 import { reportsRouter } from "./routes/reports";
+import { notificationsRouter } from "./routes/notifications";
 
 export function createApp(): express.Express {
   const app = express();
@@ -69,6 +70,7 @@ export function createApp(): express.Express {
   app.use("/", loansRouter);
   app.use("/", settingsRouter);
   app.use("/", reportsRouter);
+  app.use("/", notificationsRouter);
 
   app.use((_req, res) => {
     res.status(404).render("errors/404", { title: "Not found" });

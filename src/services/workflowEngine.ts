@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { db, asRow } from "../db";
+import { notify } from "./notificationService";
 import type {
   Workflow,
   WorkflowStep,
@@ -18,7 +19,7 @@ export interface RequestContext {
   amount?: number;
 }
 
-function employeeIdToUserId(employeeId: number | null): number | null {
+export function employeeIdToUserId(employeeId: number | null): number | null {
   if (employeeId == null) return null;
   const row = asRow<{ id: number } | undefined>(
     db.prepare("SELECT id FROM users WHERE employee_id = ? AND is_active = 1").get(employeeId)
@@ -227,6 +228,24 @@ export function submitRequest(
     }
     if (r === landingStep) break;
   }
+
+  // 6.5: "Request submitted" -> employee (confirmation), Step 1 approver.
+  const requesterUserId = employeeIdToUserId(employee.id);
+  const label = requestType === "leave" ? "leave request" : "loan request";
+  const labelAr = requestType === "leave" ? "طلب الإجازة" : "طلب السلفة";
+  const link = `/${requestType === "leave" ? "leave" : "loans"}/${requestId}`;
+  if (requesterUserId != null) {
+    notify(requesterUserId, "request_submitted", `Your ${label} was submitted.`, `تم إرسال ${labelAr}.`, link);
+  }
+  if (landingStep?.approverUserId != null) {
+    notify(
+      landingStep.approverUserId,
+      "request_submitted",
+      `A new ${label} is waiting on your approval.`,
+      `يوجد ${labelAr} جديد بانتظار موافقتك.`,
+      "/approvals"
+    );
+  }
 }
 
 export interface AdvanceResult {
@@ -260,18 +279,42 @@ export function advanceRequest(
 
   recordAction(requestType, requestId, request.current_step_order, actingUserId, null, action, comment);
 
+  const requesterUserId = employeeIdToUserId(employee.id);
+  const label = requestType === "leave" ? "request" : "loan request";
+  const labelAr = requestType === "leave" ? "الطلب" : "طلب السلفة";
+  const link = `/${requestType === "leave" ? "leave" : "loans"}/${requestId}`;
+
   if (action === "rejected") {
     db.prepare(`UPDATE ${table} SET status = 'rejected' WHERE id = ?`).run(requestId);
+    if (requesterUserId != null) {
+      notify(requesterUserId, "request_rejected", `Your ${label} was rejected.${comment ? ` Reason: ${comment}` : ""}`, `تم رفض ${labelAr}.${comment ? ` السبب: ${comment}` : ""}`, link);
+    }
     return { newStatus: "rejected", finalized: true };
   }
   if (action === "returned") {
     db.prepare(`UPDATE ${table} SET status = 'returned' WHERE id = ?`).run(requestId);
+    if (requesterUserId != null) {
+      notify(requesterUserId, "request_returned", `Your ${label} was returned for edit.${comment ? ` Note: ${comment}` : ""}`, `تمت إعادة ${labelAr} للتعديل.${comment ? ` ملاحظة: ${comment}` : ""}`, link);
+    }
     return { newStatus: "returned", finalized: true };
   }
 
   // approved
   if (currentStep?.step.is_final) {
     db.prepare(`UPDATE ${table} SET status = 'approved' WHERE id = ?`).run(requestId);
+    if (requesterUserId != null) {
+      notify(requesterUserId, "request_approved", `Your ${label} was approved.`, `تمت الموافقة على ${labelAr}.`, link);
+    }
+    for (const hr of asRow<{ id: number }[]>(
+      db
+        .prepare(
+          `SELECT u.id FROM users u JOIN user_roles ur ON ur.user_id = u.id
+           WHERE ur.role = ? AND u.is_active = 1`
+        )
+        .all(requestType === "loan" ? "finance" : "hr_officer")
+    )) {
+      notify(hr.id, "request_approved", `A ${label} was fully approved.`, `تمت الموافقة النهائية على ${labelAr}.`, link);
+    }
     return { newStatus: "approved", finalized: true };
   }
 
@@ -293,6 +336,14 @@ export function advanceRequest(
     nextLive.stepOrder,
     requestId
   );
+
+  if (requesterUserId != null) {
+    notify(requesterUserId, "step_approved", `Your ${label} moved to the next approval step.`, `انتقل ${labelAr} إلى خطوة الموافقة التالية.`, link);
+  }
+  if (nextLive.approverUserId != null) {
+    notify(nextLive.approverUserId, "step_approved", `A ${label} is waiting on your approval.`, `يوجد ${labelAr} بانتظار موافقتك.`, "/approvals");
+  }
+
   return { newStatus: "pending", finalized: false };
 }
 

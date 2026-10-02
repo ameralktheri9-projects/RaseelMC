@@ -43,6 +43,15 @@
           <button type="submit" class="btn btn-outline-secondary btn-sm"><%= lang === 'ar' ? 'English' : 'العربية' %></button>
         </form>
         <div class="dropdown">
+          <button class="btn btn-light btn-sm rounded-circle position-relative" style="width:38px;height:38px;" data-bs-toggle="dropdown" id="notif-bell">
+            🔔
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notif-badge" style="font-size:0.6rem;"></span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end p-0" style="min-width: 320px;" id="notif-list">
+            <li class="dropdown-item-text small text-muted py-2"><%= lang === 'ar' ? 'جارٍ التحميل...' : 'Loading...' %></li>
+          </ul>
+        </div>
+        <div class="dropdown">
           <button class="btn btn-light btn-sm rounded-circle" style="width:38px;height:38px;" data-bs-toggle="dropdown">
             <%= (currentUser.nameEn || '?').split(' ').map(function(w){return w[0];}).slice(0,2).join('') %>
           </button>

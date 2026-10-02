@@ -17,7 +17,10 @@ import type {
 
 export const settingsRouter = Router();
 
-settingsRouter.use(requireAuth, requireRole("hr_officer", "system_admin"));
+// Scoped to this router's actual path prefixes only — an unscoped .use() here would otherwise
+// gate every request that falls through to it (e.g. /notifications/recent for a non-admin user),
+// since Express runs a path-less router.use() for any request reaching the router at all.
+settingsRouter.use(["/settings", "/audit-log"], requireAuth, requireRole("hr_officer", "system_admin"));
 
 function audit(req: any, action: string, recordType: string, recordId: number | null, oldVal: any, newVal: any) {
   db.prepare(

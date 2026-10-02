@@ -12,7 +12,10 @@ import type { Employee } from "../models/types";
 
 export const reportsRouter = Router();
 
-reportsRouter.use(requireAuth, requireRole("hr_officer", "finance", "system_admin"));
+// Scoped to /reports only — an unscoped .use() would gate every request that falls through to
+// this router (e.g. /notifications/recent), since a path-less router.use() runs for any request
+// reaching the router at all, not just ones matching a route defined in it.
+reportsRouter.use("/reports", requireAuth, requireRole("hr_officer", "finance", "system_admin"));
 
 reportsRouter.get("/reports", (req, res) => {
   const lang = req.session.user!.language;

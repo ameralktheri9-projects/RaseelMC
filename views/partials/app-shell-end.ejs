@@ -1,3 +1,50 @@
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  var list = document.getElementById('notif-list');
+  var badge = document.getElementById('notif-badge');
+  var bell = document.getElementById('notif-bell');
+  if (!list || !bell) return;
+  var lang = document.documentElement.getAttribute('lang') || 'en';
+
+  function render(items) {
+    if (!items.length) {
+      list.innerHTML = '<li class="dropdown-item-text small text-muted py-2">' + (lang === 'ar' ? 'لا توجد إشعارات' : 'No notifications') + '</li>';
+      return;
+    }
+    list.innerHTML = items.map(function (n) {
+      var msg = lang === 'ar' ? n.message_ar : n.message_en;
+      var href = n.link_url || '#';
+      var unread = !n.is_read ? ' fw-semibold' : '';
+      return '<li><a class="dropdown-item small py-2' + unread + '" href="' + href + '">' + msg + '<div class="text-muted" style="font-size:0.7rem;">' + n.created_at + '</div></a></li>';
+    }).join('<li><hr class="dropdown-divider m-0"></li>');
+  }
+
+  async function load() {
+    try {
+      var resp = await fetch('/notifications/recent');
+      var data = await resp.json();
+      render(data.items);
+      var unreadCount = data.items.filter(function (n) { return !n.is_read; }).length;
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.classList.remove('d-none');
+      } else {
+        badge.classList.add('d-none');
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  bell.addEventListener('click', function () {
+    fetch('/notifications/mark-read', { method: 'POST' }).then(function () {
+      badge.classList.add('d-none');
+    });
+  });
+
+  load();
+  setInterval(load, 30000);
+})();
+</script>

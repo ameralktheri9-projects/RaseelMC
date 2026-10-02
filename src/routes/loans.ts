@@ -10,7 +10,8 @@ import {
   validateLoanPlan,
   type LoanPlan,
 } from "../services/loanCalculationService";
-import { submitRequest, getApprovalTrail } from "../services/workflowEngine";
+import { submitRequest, getApprovalTrail, employeeIdToUserId } from "../services/workflowEngine";
+import { notify } from "../services/notificationService";
 import type { Employee, LoanRule, LoanRuleOverride, LoanRequest } from "../models/types";
 
 export const loansRouter = Router();
@@ -286,6 +287,20 @@ loansRouter.post(
     db.prepare(
       "UPDATE loan_instalments SET status = 'deducted', deducted_at = ? WHERE loan_request_id = ? AND instalment_number = ?"
     ).run(dayjs().toISOString(), loanId, n);
+
+    const loanForNotify = db
+      .prepare("SELECT employee_id, monthly_amount FROM loan_requests WHERE id = ?")
+      .get(loanId) as { employee_id: number; monthly_amount: number };
+    const notifyUserId = employeeIdToUserId(loanForNotify.employee_id);
+    if (notifyUserId != null) {
+      notify(
+        notifyUserId,
+        "loan_instalment_deducted",
+        `Loan instalment #${n} (SAR ${loanForNotify.monthly_amount}) was deducted.`,
+        `تم خصم القسط رقم ${n} (${loanForNotify.monthly_amount} ريال) من سلفتك.`,
+        `/loans/${loanId}`
+      );
+    }
 
     const remaining = db
       .prepare(
