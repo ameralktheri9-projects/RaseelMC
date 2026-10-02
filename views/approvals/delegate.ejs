@@ -1,0 +1,62 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<a href="/approvals" class="small d-inline-block mb-3">&larr; <%= t(lang, 'common.back') %></a>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3"><%= lang === 'ar' ? 'تفويض موافقاتي' : 'Delegate my approvals' %></h2>
+    <p class="text-muted small"><%= lang === 'ar' ? 'أثناء فترة التفويض، تذهب الطلبات التي تنتظر موافقتك إلى الشخص المفوَّض بدلاً منك.' : 'During the delegation period, requests waiting on your approval go to the delegate instead.' %></p>
+    <form method="POST" action="/approvals/delegate" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small"><%= lang === 'ar' ? 'المفوَّض' : 'Delegate to' %></label>
+        <select name="delegateUserId" class="form-select" required>
+          <% users.forEach(function(u) { %>
+            <option value="<%= u.id %>"><%= lang === 'ar' ? u.name_ar : u.name_en %> (<%= u.username %>)</option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small"><%= lang === 'ar' ? 'من تاريخ' : 'Start date' %></label>
+        <input type="date" name="startDate" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small"><%= lang === 'ar' ? 'إلى تاريخ' : 'End date' %></label>
+        <input type="date" name="endDate" class="form-control" required>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100"><%= lang === 'ar' ? 'تفويض' : 'Delegate' %></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h3 class="h6 mb-3"><%= lang === 'ar' ? 'التفويضات الحالية' : 'Active delegations' %></h3>
+    <% if (!active || active.length === 0) { %>
+      <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا يوجد تفويض حالياً.' : 'No delegations set.' %></p>
+    <% } else { %>
+      <table class="table table-sm align-middle">
+        <thead class="text-muted small"><tr><th><%= lang === 'ar' ? 'المفوَّض' : 'Delegate' %></th><th><%= lang === 'ar' ? 'من' : 'From' %></th><th><%= lang === 'ar' ? 'إلى' : 'To' %></th><th></th></tr></thead>
+        <tbody>
+          <% active.forEach(function(d) { %>
+            <tr>
+              <td><%= lang === 'ar' ? d.name_ar : d.name_en %></td>
+              <td><%= d.start_date %></td>
+              <td><%= d.end_date %></td>
+              <td class="text-end">
+                <form method="POST" action="/approvals/delegate/<%= d.id %>/delete">
+                  <button class="btn btn-sm btn-outline-danger"><%= t(lang, 'common.delete') %></button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

@@ -408,7 +408,7 @@ export function getPendingApprovalsForUser(userId: number) {
     if (!workflow) continue;
     const route = buildApprovalRoute(workflow, employee);
     const step = route.find((s) => s.stepOrder === r.current_step_order);
-    if (step && step.approverUserId === userId) {
+    if (step && !step.skipped && step.approverUserId === userId) {
       result.push(r);
     }
   }

@@ -1,6 +1,10 @@
 <%- include('../partials/head', { title, lang }) %>
 <%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
 
+<div class="d-flex justify-content-end mb-2">
+  <a href="/approvals/delegate" class="btn btn-sm btn-outline-secondary"><%= lang === 'ar' ? 'تفويض الموافقات' : 'Delegate approvals' %></a>
+</div>
+
 <ul class="nav nav-tabs mb-3">
   <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#pending-tab"><%= lang === 'ar' ? 'قيد الموافقة' : 'Pending' %> (<%= pending.length %>)</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#decided-tab"><%= lang === 'ar' ? 'تم اتخاذ قرار' : 'Decided' %></a></li>

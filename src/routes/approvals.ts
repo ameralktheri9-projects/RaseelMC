@@ -13,6 +13,52 @@ import type { Employee, RequestType } from "../models/types";
 
 export const approvalsRouter = Router();
 
+approvalsRouter.get("/approvals/delegate", requireAuth, (req, res) => {
+  const lang = req.session.user!.language;
+  const userId = req.session.user!.userId;
+
+  const users = db
+    .prepare(
+      `SELECT u.id, u.username, e.name_en, e.name_ar FROM users u
+       LEFT JOIN employees e ON e.id = u.employee_id
+       WHERE u.id != ? AND u.is_active = 1 ORDER BY e.name_en`
+    )
+    .all(userId);
+  const active = db
+    .prepare(
+      `SELECT d.*, u.username, e.name_en, e.name_ar FROM delegations d
+       JOIN users u ON u.id = d.delegate_user_id
+       LEFT JOIN employees e ON e.id = u.employee_id
+       WHERE d.approver_user_id = ? ORDER BY d.start_date DESC`
+    )
+    .all(userId);
+
+  res.render("approvals/delegate", {
+    title: lang === "ar" ? "تفويض الموافقات" : "Delegate approvals",
+    lang,
+    users,
+    active,
+  });
+});
+
+approvalsRouter.post("/approvals/delegate", requireAuth, (req, res) => {
+  const userId = req.session.user!.userId;
+  const { delegateUserId, startDate, endDate } = req.body as Record<string, string>;
+  db.prepare(
+    "INSERT INTO delegations (approver_user_id, delegate_user_id, start_date, end_date) VALUES (?, ?, ?, ?)"
+  ).run(userId, Number(delegateUserId), startDate, endDate);
+  res.redirect("/approvals/delegate");
+});
+
+approvalsRouter.post("/approvals/delegate/:id/delete", requireAuth, (req, res) => {
+  const userId = req.session.user!.userId;
+  db.prepare("DELETE FROM delegations WHERE id = ? AND approver_user_id = ?").run(
+    Number(req.params.id),
+    userId
+  );
+  res.redirect("/approvals/delegate");
+});
+
 approvalsRouter.get("/approvals", requireAuth, (req, res) => {
   const lang = req.session.user!.language;
   const userId = req.session.user!.userId;
@@ -56,7 +102,7 @@ approvalsRouter.get("/approvals", requireAuth, (req, res) => {
     );
     const route = buildApprovalRoute(workflow, employee);
     const step = route.find((s: any) => s.stepOrder === r.current_step_order);
-    return step && step.approverUserId === userId;
+    return !!step && !step.skipped && step.approverUserId === userId;
   });
 
   const decided = db
