@@ -13,6 +13,21 @@ import type { Employee, RequestType } from "../models/types";
 
 export const approvalsRouter = Router();
 
+/** Resolves who can actually act on a request's current step right now, or null if it's not pending/resolvable. */
+function resolveCurrentApproverUserId(requestType: RequestType, id: number): number | null {
+  const table = requestType === "leave" ? "leave_requests" : "loan_requests";
+  const request = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as any;
+  if (!request || request.status !== "pending" || request.workflow_id == null) return null;
+
+  const workflow = asRow<any>(db.prepare("SELECT * FROM workflows WHERE id = ?").get(request.workflow_id));
+  if (!workflow) return null;
+  const employee = asRow<Employee>(db.prepare("SELECT * FROM employees WHERE id = ?").get(request.employee_id));
+  const route = buildApprovalRoute(workflow, employee);
+  const step = route.find((s) => s.stepOrder === request.current_step_order);
+  if (!step || step.skipped) return null;
+  return step.approverUserId;
+}
+
 approvalsRouter.get("/approvals/delegate", requireAuth, (req, res) => {
   const lang = req.session.user!.language;
   const userId = req.session.user!.userId;
@@ -62,6 +77,7 @@ approvalsRouter.post("/approvals/delegate/:id/delete", requireAuth, (req, res) =
 approvalsRouter.get("/approvals", requireAuth, (req, res) => {
   const lang = req.session.user!.language;
   const userId = req.session.user!.userId;
+  const isAdmin = req.session.user!.roles.includes("system_admin");
 
   const pending = db
     .prepare(
@@ -87,23 +103,13 @@ approvalsRouter.get("/approvals", requireAuth, (req, res) => {
     )
     .all() as any[];
 
-  // Filter down to requests actually waiting on this user's step (resolves approver dynamically).
-  const myPending = pending.filter((r) => {
-    const workflow = asRow<any>(db.prepare("SELECT * FROM workflows WHERE id = ?").get(r.workflow_id));
-    if (!workflow) return false;
-    const employee = asRow<Employee>(
-      db
-        .prepare(
-          `SELECT e.* FROM employees e
-           JOIN ${r.request_type === "leave" ? "leave_requests" : "loan_requests"} req ON req.employee_id = e.id
-           WHERE req.id = ?`
-        )
-        .get(r.id)
-    );
-    const route = buildApprovalRoute(workflow, employee);
-    const step = route.find((s: any) => s.stepOrder === r.current_step_order);
-    return !!step && !step.skipped && step.approverUserId === userId;
-  });
+  // System Admin gets full company-wide oversight of every pending request (and can act on any of
+  // them as an override); everyone else only sees requests actually waiting on their own step.
+  const myPending = isAdmin
+    ? pending.map((r) => ({ ...r, isMine: resolveCurrentApproverUserId(r.request_type, r.id) === userId }))
+    : pending
+        .filter((r) => resolveCurrentApproverUserId(r.request_type, r.id) === userId)
+        .map((r) => ({ ...r, isMine: true }));
 
   const decided = db
     .prepare(
@@ -127,8 +133,13 @@ approvalsRouter.get("/approvals", requireAuth, (req, res) => {
 
 approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
   const lang = req.session.user!.language;
+  const sessionUser = req.session.user!;
   const requestType = req.params.type as RequestType;
   const id = Number(req.params.id);
+  const resolvedApproverUserId = resolveCurrentApproverUserId(requestType, id);
+  const isAdmin = sessionUser.roles.includes("system_admin");
+  const isAdminOverride = isAdmin && resolvedApproverUserId !== sessionUser.userId;
+  const canActHere = resolvedApproverUserId === sessionUser.userId || isAdmin;
 
   if (requestType === "leave") {
     const request = db
@@ -182,7 +193,7 @@ approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
     });
 
     const trail = getApprovalTrail("leave", id);
-    const canAct = request.status === "pending" && request.current_step_order != null;
+    const canAct = request.status === "pending" && canActHere;
 
     res.render("approvals/detail-leave", {
       title: t(lang, "nav.approvals"),
@@ -191,6 +202,7 @@ approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
       balance,
       trail,
       canAct,
+      isAdminOverride,
       error: req.query.error === "comment_required" ? "comment_required" : null,
     });
     return;
@@ -211,11 +223,14 @@ approvalsRouter.get("/approvals/:type/:id", requireAuth, (req, res) => {
   }
 
   const trail = getApprovalTrail("loan", id);
+  const canAct = (request as any).status === "pending" && canActHere;
   res.render("approvals/detail-loan", {
     title: t(lang, "nav.approvals"),
     lang,
     request,
     trail,
+    canAct,
+    isAdminOverride,
     error: req.query.error === "comment_required" ? "comment_required" : null,
   });
 });
@@ -237,6 +252,17 @@ approvalsRouter.post("/approvals/:type/:id/action", requireAuth, (req, res) => {
     res.status(404).send("Not found");
     return;
   }
+
+  // Authorization: only the step's actually-resolved approver (or System Admin, as an override)
+  // may act here — this used to be unchecked, so any logged-in user could approve/reject any
+  // request by guessing its URL.
+  const resolvedApproverUserId = resolveCurrentApproverUserId(requestType, id);
+  const isAdmin = sessionUser.roles.includes("system_admin");
+  if (resolvedApproverUserId !== sessionUser.userId && !isAdmin) {
+    res.status(403).render("errors/403", { title: "Forbidden" });
+    return;
+  }
+
   const employee = asRow<Employee>(
     db.prepare("SELECT * FROM employees WHERE id = ?").get(request.employee_id)
   );

@@ -39,6 +39,16 @@
           <div class="mb-2"><span class="text-muted small"><%= lang === 'ar' ? 'التسليم إلى' : 'Handover to' %>:</span> <%= lang === 'ar' ? request.handover_name_ar : request.handover_name_en %></div>
         <% } %>
 
+        <% if (request.status === 'pending' && !canAct) { %>
+          <div class="alert alert-light border small mt-4 mb-0">
+            <%= lang === 'ar' ? 'هذا الطلب بانتظار موافقة شخص آخر.' : 'This request is waiting on someone else\'s approval.' %>
+          </div>
+        <% } %>
+        <% if (isAdminOverride) { %>
+          <div class="alert alert-warning small mt-4 mb-0">
+            <%= lang === 'ar' ? 'أنت مدير النظام — أي إجراء هنا يتجاوز المعتمد الفعلي لهذه الخطوة.' : 'You\'re System Admin — acting here overrides the step\'s actual approver.' %>
+          </div>
+        <% } %>
         <% if (canAct) { %>
           <form method="POST" action="/approvals/leave/<%= request.id %>/action" class="mt-4 border-top pt-3" id="action-form">
             <div class="mb-3">

@@ -26,11 +26,12 @@
                   <th><%= lang === 'ar' ? 'التفاصيل' : 'Details' %></th>
                   <th><%= lang === 'ar' ? 'القسم' : 'Department' %></th>
                   <th></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 <% pending.forEach(function(r) { %>
-                  <tr>
+                  <tr class="<%= !r.isMine ? 'text-muted' : '' %>">
                     <td><%= lang === 'ar' ? r.name_ar : r.name_en %><div class="text-muted small"><%= r.employee_code %></div></td>
                     <td><%= lang === 'ar' ? r.sub_type_ar : r.sub_type_en %></td>
                     <td>
@@ -41,8 +42,13 @@
                       <% } %>
                     </td>
                     <td><%= lang === 'ar' ? r.dept_ar : r.dept_en %></td>
+                    <td>
+                      <% if (!r.isMine) { %>
+                        <span class="badge bg-light text-muted" title="<%= lang === 'ar' ? 'بانتظار موافقة شخص آخر' : 'Waiting on someone else' %>"><%= lang === 'ar' ? 'إشراف' : 'oversight' %></span>
+                      <% } %>
+                    </td>
                     <td class="text-end">
-                      <a href="/approvals/<%= r.request_type %>/<%= r.id %>" class="btn btn-sm btn-primary"><%= lang === 'ar' ? 'مراجعة' : 'Review' %></a>
+                      <a href="/approvals/<%= r.request_type %>/<%= r.id %>" class="btn btn-sm <%= r.isMine ? 'btn-primary' : 'btn-outline-secondary' %>"><%= lang === 'ar' ? 'مراجعة' : 'Review' %></a>
                     </td>
                   </tr>
                 <% }) %>
