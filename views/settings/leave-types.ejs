@@ -53,7 +53,7 @@
     </div>
 
     <table class="table table-sm align-middle">
-      <thead class="text-muted small"><tr><th>Name</th><th>Paid</th><th>Days/yr</th><th>Attachment</th><th>Status</th></tr></thead>
+      <thead class="text-muted small"><tr><th>Name</th><th>Paid</th><th>Days/yr</th><th>Attachment</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <% leaveTypes.forEach(function(lt) { %>
           <tr>
@@ -62,6 +62,37 @@
             <td><%= lt.annual_days ?? '-' %></td>
             <td><%= lt.requires_attachment ? (lang === 'ar' ? 'مطلوب' : 'Required') : '-' %></td>
             <td><span class="badge <%= lt.is_active ? 'bg-success' : 'bg-secondary' %>"><%= lt.is_active ? t(lang,'common.active') : t(lang,'common.inactive') %></span></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-lt-<%= lt.id %>"><%= t(lang, 'common.edit') %></button>
+              <form method="POST" action="/settings/leave-types/<%= lt.id %>/toggle-active" class="d-inline">
+                <button class="btn btn-sm <%= lt.is_active ? 'btn-outline-danger' : 'btn-outline-success' %>"><%= lt.is_active ? (lang === 'ar' ? 'إزالة' : 'Remove') : (lang === 'ar' ? 'تفعيل' : 'Activate') %></button>
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="6" class="p-0 border-0">
+              <!-- A <tr> can't use Bootstrap's .collapse directly (it needs display:table-row, not
+                   the block/none that .collapse toggles), so the collapse lives on this inner div
+                   instead, inside a td that always stays in normal table flow. -->
+              <div class="collapse" id="edit-lt-<%= lt.id %>">
+                <div class="bg-light p-2">
+                  <form method="POST" action="/settings/leave-types/<%= lt.id %>" class="row g-2 py-2">
+                    <div class="col-md-3"><input name="nameEn" class="form-control form-control-sm" value="<%= lt.name_en %>" placeholder="Name (EN)" required></div>
+                    <div class="col-md-3"><input name="nameAr" class="form-control form-control-sm" value="<%= lt.name_ar %>" dir="rtl" placeholder="الاسم" required></div>
+                    <div class="col-md-2"><input type="number" name="annualDays" class="form-control form-control-sm" value="<%= lt.annual_days ?? '' %>" placeholder="Days/year"></div>
+                    <div class="col-md-4 d-flex align-items-center gap-3 small">
+                      <label><input type="checkbox" name="isPaid" <%= lt.is_paid ? 'checked' : '' %>> <%= lang === 'ar' ? 'مدفوعة' : 'Paid' %></label>
+                      <label><input type="checkbox" name="requiresAttachment" <%= lt.requires_attachment ? 'checked' : '' %>> <%= lang === 'ar' ? 'مرفق مطلوب' : 'Attachment' %></label>
+                      <label><input type="checkbox" name="allowsNegativeBalance" <%= lt.allows_negative_balance ? 'checked' : '' %>> <%= lang === 'ar' ? 'رصيد سالب' : 'Negative OK' %></label>
+                    </div>
+                    <input type="hidden" name="isActive" value="<%= lt.is_active ? '1' : '' %>">
+                    <div class="col-12">
+                      <button type="submit" class="btn btn-sm btn-primary"><%= t(lang, 'common.save') %></button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </td>
           </tr>
         <% }) %>
       </tbody>

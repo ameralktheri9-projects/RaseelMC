@@ -19,3 +19,6 @@ Thumbs.db
 ## Logs
 *.log
 logs/
+
+## Local dev tools (e.g. cloudflared for temporary external tunnels), not part of the app
+.tools/

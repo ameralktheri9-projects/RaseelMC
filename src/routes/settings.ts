@@ -369,6 +369,20 @@ settingsRouter.post("/settings/leave-types/:id", (req, res) => {
   res.redirect("/settings/leave-types");
 });
 
+settingsRouter.post("/settings/leave-types/:id/toggle-active", (req, res) => {
+  const id = Number(req.params.id);
+  const current = db.prepare("SELECT is_active FROM leave_types WHERE id = ?").get(id) as
+    | { is_active: number }
+    | undefined;
+  if (!current) {
+    res.redirect("/settings/leave-types");
+    return;
+  }
+  db.prepare("UPDATE leave_types SET is_active = ? WHERE id = ?").run(current.is_active ? 0 : 1, id);
+  audit(req, "toggle_leave_type_active", "leave_types", id, current, { is_active: current.is_active ? 0 : 1 });
+  res.redirect("/settings/leave-types");
+});
+
 settingsRouter.post("/settings/entitlement-rules", (req, res) => {
   const body = req.body as Record<string, string>;
   db.prepare("DELETE FROM leave_entitlement_rules").run();
