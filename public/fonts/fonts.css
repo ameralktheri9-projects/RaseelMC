@@ -1,0 +1,50 @@
+/* Self-hosted IBM Plex Sans / IBM Plex Sans Arabic (latin + arabic subsets only). */
+
+/* ibm-plex-sans-latin-400-normal */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(./ibm-plex-sans-latin-400-normal.woff2) format('woff2'), url(./ibm-plex-sans-latin-400-normal.woff) format('woff');
+}
+/* ibm-plex-sans-latin-500-normal */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(./ibm-plex-sans-latin-500-normal.woff2) format('woff2'), url(./ibm-plex-sans-latin-500-normal.woff) format('woff');
+}
+/* ibm-plex-sans-latin-600-normal */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(./ibm-plex-sans-latin-600-normal.woff2) format('woff2'), url(./ibm-plex-sans-latin-600-normal.woff) format('woff');
+}
+/* ibm-plex-sans-arabic-arabic-400-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(./ibm-plex-sans-arabic-arabic-400-normal.woff2) format('woff2'), url(./ibm-plex-sans-arabic-arabic-400-normal.woff) format('woff');
+}
+/* ibm-plex-sans-arabic-arabic-500-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(./ibm-plex-sans-arabic-arabic-500-normal.woff2) format('woff2'), url(./ibm-plex-sans-arabic-arabic-500-normal.woff) format('woff');
+}
+/* ibm-plex-sans-arabic-arabic-600-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(./ibm-plex-sans-arabic-arabic-600-normal.woff2) format('woff2'), url(./ibm-plex-sans-arabic-arabic-600-normal.woff) format('woff');
+}

@@ -4,32 +4,22 @@
 <% if (!employee) { %>
   <h2 class="h4 mb-3"><%= lang === 'ar' ? 'نظرة عامة' : 'Overview' %></h2>
 
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="card h-100"><div class="card-body text-center">
-        <div class="card-stat-value"><%= adminStats.totalEmployees %></div>
-        <div class="text-muted small"><%= lang === 'ar' ? 'الموظفون النشطون' : 'Active employees' %></div>
-      </div></div>
+  <div class="grid kpis mb-4">
+    <div class="kpi">
+      <div class="kpi-top"><span><%= lang === 'ar' ? 'الموظفون النشطون' : 'Active employees' %></span></div>
+      <strong><%= adminStats.totalEmployees %></strong>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="card h-100"><div class="card-body text-center">
-        <a href="/approvals" class="text-decoration-none">
-          <div class="card-stat-value"><%= adminStats.pendingLeaveCount + adminStats.pendingLoanCount %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'طلبات بانتظار الموافقة' : 'Pending approvals' %></div>
-        </a>
-      </div></div>
+    <a href="/approvals" class="kpi amber">
+      <div class="kpi-top"><span><%= lang === 'ar' ? 'طلبات بانتظار الموافقة' : 'Pending approvals' %></span></div>
+      <strong><%= adminStats.pendingLeaveCount + adminStats.pendingLoanCount %></strong>
+    </a>
+    <div class="kpi purple">
+      <div class="kpi-top"><span><%= lang === 'ar' ? 'سلف نشطة' : 'Active loans' %></span></div>
+      <strong><%= adminStats.activeLoansCount %></strong>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="card h-100"><div class="card-body text-center">
-        <div class="card-stat-value"><%= adminStats.activeLoansCount %></div>
-        <div class="text-muted small"><%= lang === 'ar' ? 'سلف نشطة' : 'Active loans' %></div>
-      </div></div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card h-100"><div class="card-body text-center">
-        <div class="card-stat-value">SAR <%= adminStats.activeLoansOutstanding.toFixed(0) %></div>
-        <div class="text-muted small"><%= lang === 'ar' ? 'رصيد السلف المستحق' : 'Loans outstanding' %></div>
-      </div></div>
+    <div class="kpi green">
+      <div class="kpi-top"><span><%= lang === 'ar' ? 'رصيد السلف المستحق' : 'Loans outstanding' %></span></div>
+      <strong>SAR <%= adminStats.activeLoansOutstanding.toFixed(0) %></strong>
     </div>
   </div>
 
@@ -88,62 +78,53 @@
     </div>
   </div>
 
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="row align-items-center">
-        <div class="col-md-4">
-          <div class="text-muted small mb-1"><%= lang === 'ar' ? 'رصيد الإجازة السنوية المتبقي' : 'Annual paid leave · remaining' %></div>
-          <div class="card-stat-value"><%= balance.remaining %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'يوم متاح الآن' : 'days you can use now' %></div>
+  <div class="card hero mb-4">
+    <div class="balance">
+      <div>
+        <div class="text-muted small mb-1"><%= lang === 'ar' ? 'رصيد الإجازة السنوية المتبقي' : 'Annual paid leave · remaining' %></div>
+        <div class="balance-num"><%= balance.remaining %> <span><%= lang === 'ar' ? 'يوم متاح الآن' : 'days you can use now' %></span></div>
+      </div>
+      <div class="fact-grid mb-0" style="flex:1;min-width:280px;">
+        <div class="fact">
+          <small><%= lang === 'ar' ? 'المستحق السنوي' : 'Full-year entitlement' %></small>
+          <strong><%= balance.fullYearEntitlement %></strong>
         </div>
-        <div class="col-md-8">
-          <div class="alert alert-light border small mb-0">
-            <% if (lang === 'ar') { %>
-              المستحق <%= balance.fullYearEntitlement %> يوماً سنوياً (30 يوماً بعد السنة السادسة). يُحتسب <%= (balance.fullYearEntitlement/12).toFixed(2) %> يوم عن كل شهر مكتمل.
-            <% } else { %>
-              Entitlement is <%= balance.fullYearEntitlement %> days a year (30 days from your 6th year). It accrues <%= (balance.fullYearEntitlement/12).toFixed(2) %> days for each completed month.
-            <% } %>
-          </div>
+        <div class="fact">
+          <small><%= lang === 'ar' ? 'المتراكم حتى الآن' : 'Accrued to date' %></small>
+          <strong><%= balance.accruedToDate %></strong>
+        </div>
+        <div class="fact">
+          <small><%= lang === 'ar' ? 'مرحّل من العام السابق' : 'Carried over' %></small>
+          <strong><%= balance.carriedOver %></strong>
+        </div>
+        <div class="fact">
+          <small><%= lang === 'ar' ? 'قيد الموافقة' : 'Pending approval' %></small>
+          <strong><%= balance.pending %></strong>
         </div>
       </div>
+    </div>
 
-      <% const total = Math.max(0.0001, balance.taken + balance.pending + balance.remaining);
-         const pctTaken = (balance.taken/total*100).toFixed(1);
-         const pctPending = (balance.pending/total*100).toFixed(1);
-         const pctRemaining = (balance.remaining/total*100).toFixed(1); %>
-      <div class="progress progress-leave my-3">
-        <div class="progress-bar" style="width: <%= pctTaken %>%; background-color: var(--rmc-navy);"></div>
-        <div class="progress-bar" style="width: <%= pctPending %>%; background-color: #e8a33d;"></div>
-        <div class="progress-bar" style="width: <%= pctRemaining %>%; background-color: #8fb8f6;"></div>
-      </div>
-      <div class="small text-muted mb-3">
-        <span class="me-3">&#9632; <%= lang === 'ar' ? 'مستخدم' : 'Taken' %> <%= balance.taken %></span>
-        <span class="me-3">&#9632; <%= lang === 'ar' ? 'قيد الموافقة' : 'Pending' %> <%= balance.pending %></span>
-        <span>&#9632; <%= lang === 'ar' ? 'متبقي' : 'Remaining' %> <%= balance.remaining %></span>
-      </div>
+    <% const total = Math.max(0.0001, balance.taken + balance.pending + balance.remaining);
+       const pctTaken = (balance.taken/total*100).toFixed(1);
+       const pctPending = (balance.pending/total*100).toFixed(1);
+       const pctRemaining = (balance.remaining/total*100).toFixed(1); %>
+    <div class="bar">
+      <i style="width: <%= pctTaken %>%; background: var(--blue);"></i>
+      <i style="width: <%= pctPending %>%; background: #e8b65a;"></i>
+      <i style="width: <%= pctRemaining %>%; background: var(--sky);"></i>
+    </div>
+    <div class="legend mb-0">
+      <span><b style="background:var(--blue);"></b> <%= lang === 'ar' ? 'مستخدم' : 'Taken' %> <%= balance.taken %></span>
+      <span><b style="background:#e8b65a;"></b> <%= lang === 'ar' ? 'قيد الموافقة' : 'Pending' %> <%= balance.pending %></span>
+      <span><b style="background:var(--sky);"></b> <%= lang === 'ar' ? 'متبقي' : 'Remaining' %> <%= balance.remaining %></span>
+    </div>
 
-      <div class="row text-center border-top pt-3">
-        <div class="col">
-          <div class="fw-bold fs-5"><%= balance.fullYearEntitlement %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'المستحق السنوي' : 'Full-year entitlement' %></div>
-        </div>
-        <div class="col">
-          <div class="fw-bold fs-5"><%= balance.accruedToDate %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'المتراكم حتى الآن' : 'Accrued to date' %></div>
-        </div>
-        <div class="col">
-          <div class="fw-bold fs-5"><%= balance.carriedOver %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'مرحّل من العام السابق' : 'Carried over' %></div>
-        </div>
-        <div class="col">
-          <div class="fw-bold fs-5"><%= balance.taken %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'مستخدم هذا العام' : 'Taken this year' %></div>
-        </div>
-        <div class="col">
-          <div class="fw-bold fs-5"><%= balance.pending %></div>
-          <div class="text-muted small"><%= lang === 'ar' ? 'قيد الموافقة' : 'Pending approval' %></div>
-        </div>
-      </div>
+    <div class="hero-note">
+      <% if (lang === 'ar') { %>
+        المستحق <%= balance.fullYearEntitlement %> يوماً سنوياً (30 يوماً بعد السنة السادسة). يُحتسب <%= (balance.fullYearEntitlement/12).toFixed(2) %> يوم عن كل شهر مكتمل.
+      <% } else { %>
+        Entitlement is <%= balance.fullYearEntitlement %> days a year (30 days from your 6th year). It accrues <%= (balance.fullYearEntitlement/12).toFixed(2) %> days for each completed month.
+      <% } %>
     </div>
   </div>
 
