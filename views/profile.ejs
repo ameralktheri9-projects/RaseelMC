@@ -1,0 +1,62 @@
+<%- include('partials/head', { title, lang }) %>
+<%- include('partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<% if (saved) { %>
+  <div class="alert alert-success py-2 small mb-3"><%= lang === 'ar' ? 'تم حفظ التغييرات.' : 'Changes saved.' %></div>
+<% } %>
+
+<div class="row">
+  <div class="col-lg-7">
+    <% if (employee) { %>
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'بياناتي' : 'My details' %></h2>
+          <div class="info-row"><span><%= lang === 'ar' ? 'الاسم' : 'Name' %></span><strong><%= lang === 'ar' ? employee.name_ar : employee.name_en %></strong></div>
+          <div class="info-row"><span><%= lang === 'ar' ? 'الرقم الوظيفي' : 'Employee code' %></span><strong><%= employee.employee_code %></strong></div>
+          <div class="info-row"><span><%= lang === 'ar' ? 'القسم' : 'Department' %></span><strong><%= department ? (lang === 'ar' ? department.name_ar : department.name_en) : '-' %></strong></div>
+          <div class="info-row"><span><%= lang === 'ar' ? 'المسمى الوظيفي' : 'Job title' %></span><strong><%= employee.job_title || '-' %></strong></div>
+          <div class="info-row"><span><%= lang === 'ar' ? 'المدير المباشر' : 'Direct manager' %></span><strong><%= manager ? (lang === 'ar' ? manager.name_ar : manager.name_en) : '-' %></strong></div>
+          <div class="info-row"><span><%= lang === 'ar' ? 'تاريخ الالتحاق' : 'Joining date' %></span><strong><%= employee.joining_date %></strong></div>
+          <p class="text-muted small mt-3 mb-0"><%= lang === 'ar' ? 'هذه البيانات تُدار من قِبل الموارد البشرية. لتعديلها تواصل مع HR.' : 'These details are HR-managed. Contact HR to request a change.' %></p>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'معلومات التواصل' : 'Contact information' %></h2>
+          <form method="POST" action="/profile">
+            <div class="mb-3">
+              <label class="form-label fw-semibold"><%= lang === 'ar' ? 'البريد الإلكتروني الشخصي' : 'Personal email' %></label>
+              <input type="email" name="personalEmail" class="form-control" value="<%= employee.personal_email || '' %>" placeholder="name@example.com">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold"><%= lang === 'ar' ? 'رقم الجوال' : 'Phone number' %></label>
+              <input type="tel" name="phone" class="form-control" value="<%= employee.phone || '' %>" placeholder="05xxxxxxxx">
+            </div>
+            <button type="submit" class="btn btn-primary"><%= t(lang, 'common.save') %></button>
+          </form>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-1"><%= currentUser.nameEn %></h2>
+          <p class="text-muted small mb-0"><%= currentUser.username %></p>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h5 mb-3"><%= lang === 'ar' ? 'الأمان' : 'Security' %></h2>
+        <p class="text-muted small mb-3"><%= lang === 'ar' ? 'غيّر كلمة المرور الخاصة بك بشكل دوري.' : 'Change your password periodically.' %></p>
+        <a href="/change-password" class="btn btn-outline-secondary w-100"><%= lang === 'ar' ? 'تغيير كلمة المرور' : 'Change password' %></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/app-shell-end') %>
+<%- include('partials/scripts') %>

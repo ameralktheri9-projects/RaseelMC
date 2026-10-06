@@ -309,7 +309,7 @@ td strong { font-weight: 600; }
 .approval-item p { margin: 0; color: var(--muted); font-size: 12px; }
 
 /* ---------- Fact grid ---------- */
-.fact-grid { grid-template-columns: repeat(4, 1fr); margin: 17px 0; }
+.fact-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 17px 0; }
 .fact { background: var(--bg); padding: 13px; border-radius: 9px; }
 .fact small { display: block; color: var(--muted); }
 .fact strong { display: block; margin-top: 4px; }
@@ -369,6 +369,13 @@ td strong { font-weight: 600; }
 .rounded-pill { border-radius: 999px; }
 .top-0 { top: 0; } .start-100 { left: 100%; } [dir="rtl"] .start-100 { left: auto; right: 100%; }
 .translate-middle { transform: translate(-50%, -50%); }
+
+/* Always pinned to the icon's own top-right corner, deliberately not mirrored for RTL — the
+   topbar's own layout already mirrors, which previously left-and-right-flipped this badge onto
+   whichever neighboring button happened to sit on that side (e.g. overlapping the avatar in AR). */
+.notif-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--red); color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; line-height: 1; }
 
 /* ---------- Auth (login / change-password) pages ---------- */
 .auth-shell { min-height: 100vh; display: flex; }

@@ -6,21 +6,21 @@
   const hasEmployeeProfile = currentUser && currentUser.employeeId != null;
 
   const workspaceItems = [
-    { href: '/dashboard', key: 'nav.dashboard', icon: '&#8962;', enabled: true },
+    { href: '/dashboard', key: 'nav.dashboard', icon: '&#8962;' },
   ];
   if (hasEmployeeProfile) {
-    workspaceItems.push({ href: '/leave', key: 'nav.myLeave', icon: '&#128197;', enabled: true });
-    workspaceItems.push({ href: '/loans', key: 'nav.myLoans', icon: '&#128179;', enabled: true });
+    workspaceItems.push({ href: '/leave', key: 'nav.myLeave', icon: '&#128197;' });
+    workspaceItems.push({ href: '/loans', key: 'nav.myLoans', icon: '&#128179;' });
   }
-  workspaceItems.push({ href: '/approvals', key: 'nav.approvals', icon: '&#9989;', enabled: true });
+  workspaceItems.push({ href: '/approvals', key: 'nav.approvals', icon: '&#9989;' });
+  workspaceItems.push({ href: '/profile', key: 'nav.profile', icon: '&#128100;' });
 
-  const managementItems = [
-    { href: '/reports', key: 'nav.reports', icon: '&#128202;', enabled: canSeeReports },
-    { href: '/settings', key: 'nav.settings', icon: '&#9881;', enabled: isAdminOrHr },
-  ];
-  if (isAdmin) {
-    managementItems.push({ href: '/audit-log', key: 'nav.auditLog', icon: '&#128220;', enabled: true });
-  }
+  // Only items this user actually has access to — a role-gated item that's merely shown-but-disabled
+  // to everyone else just adds clutter for accounts (e.g. plain employees) that will never use it.
+  const managementItems = [];
+  if (canSeeReports) managementItems.push({ href: '/reports', key: 'nav.reports', icon: '&#128202;' });
+  if (isAdminOrHr) managementItems.push({ href: '/settings', key: 'nav.settings', icon: '&#9881;' });
+  if (isAdmin) managementItems.push({ href: '/audit-log', key: 'nav.auditLog', icon: '&#128220;' });
 
   const roleLabels = [];
   if (roles.includes('system_admin')) roleLabels.push(lang === 'ar' ? 'مدير النظام' : 'System Admin');
@@ -33,10 +33,7 @@
 
   function navLink(item) {
     var active = currentPath && currentPath.startsWith(item.href);
-    if (item.enabled) {
-      return '<a href="' + item.href + '" class="' + (active ? 'active' : '') + '"><span class="ico">' + item.icon + '</span><span>' + t(lang, item.key) + '</span></a>';
-    }
-    return '<span class="disabled" title="' + (lang === 'ar' ? 'غير متاح لدورك' : 'Not available for your role') + '"><span class="ico">' + item.icon + '</span><span>' + t(lang, item.key) + '</span></span>';
+    return '<a href="' + item.href + '" class="' + (active ? 'active' : '') + '"><span class="ico">' + item.icon + '</span><span>' + t(lang, item.key) + '</span></a>';
   }
 %>
 <div class="shell<%= lang === 'ar' ? ' rtl' : '' %>">
@@ -83,7 +80,7 @@
         <div class="dropdown">
           <button class="icon-btn position-relative" data-bs-toggle="dropdown" id="notif-bell">
             &#128276;
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notif-badge" style="font-size:.6rem;"></span>
+            <span class="notif-badge d-none" id="notif-badge"></span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end p-0" style="min-width:320px;" id="notif-list">
             <li class="dropdown-item-text small text-muted py-2"><%= lang === 'ar' ? 'جارٍ التحميل...' : 'Loading...' %></li>

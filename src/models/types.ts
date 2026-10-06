@@ -46,6 +46,8 @@ export interface Employee {
   direct_manager_id: number | null;
   joining_date: string; // YYYY-MM-DD
   gross_salary: number | null;
+  personal_email: string | null;
+  phone: string | null;
   status: "active" | "on_leave" | "terminated";
   created_at: string;
   updated_at: string;
