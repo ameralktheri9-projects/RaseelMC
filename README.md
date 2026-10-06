@@ -7,25 +7,38 @@ request routes through an admin-configurable approval workflow. Built from
 
 ## Tech stack
 
-Node.js + TypeScript + Express, server-rendered EJS views, SQLite via Node's
-built-in `node:sqlite` (no native dependencies, no separate database server
-to install). Bilingual English/Arabic with RTL layout. Bootstrap is
-self-hosted (not loaded from a CDN) since this app is meant to run on a
-network with no internet access.
+Node.js + TypeScript + Express, server-rendered EJS views, Postgres (hosted
+on [Neon](https://neon.tech)) via `pg`, deployed on [Vercel](https://vercel.com).
+Bilingual English/Arabic with RTL layout. Fonts are self-hosted (no Google
+Fonts CDN call) and Bootstrap's CSS has been replaced by a custom design
+system — only its JS bundle is kept (self-hosted), for the `.collapse`/
+`.dropdown` interactions.
 
-See `.claude/plans/` conversation history for why this stack was chosen over
-the BRD's suggested ASP.NET Core + SQL Server (short version: this dev
-environment's network couldn't sustain large installer downloads; Node was
-already present and SQLite needs zero install).
+The app originally ran on SQLite (`node:sqlite`) for fully on-prem, no-DB-
+server hosting — see `.claude/plans/` conversation history for that
+reasoning. It has since moved to Postgres/Neon/Vercel; this trades the
+"internal network only" hosting posture for Vercel's public-internet
+hosting, same tradeoff already made earlier via a temporary Cloudflare
+tunnel, now permanent. Authentication/RBAC are unchanged either way.
 
-## Running it
+Sessions are stored in Postgres (`connect-pg-simple`, auto-creates a
+`user_sessions` table) rather than in-process memory, since Vercel's
+serverless functions share no memory between invocations. Background jobs
+(leave-year closing, SLA escalation, "leave tomorrow" reminder) run via
+Vercel Cron hitting `/api/cron/daily` in production, or `node-cron` directly
+when running locally/on-prem (`src/server.ts`).
 
-Prerequisites: Node.js 22.5+ (the app uses `node:sqlite`, available from
-Node 22.5 onward; developed and tested on Node 24).
+## Running it locally
+
+Prerequisites: Node.js 22.5+, and a Postgres connection string (Neon's free
+tier works fine for development — use the **pooled** connection string from
+its dashboard, not the direct one).
 
 ```bash
+cp .env.example .env   # fill in DATABASE_URL (and SESSION_SECRET) in .env
 npm install
-npm run seed     # creates data/raseel-mc.db, applies the schema, seeds test data
+npm run migrate  # applies the schema to DATABASE_URL
+npm run seed     # seeds test data (skips if already seeded)
 npm run dev      # starts the dev server with auto-reload at http://localhost:3000
 ```
 
@@ -35,6 +48,22 @@ For a production-style run (no file-watching):
 npm run build
 npm start
 ```
+
+## Deploying (Vercel + Neon)
+
+1. Create a Neon project and copy its **pooled** connection string into
+   `DATABASE_URL`.
+2. In the Vercel project's environment variables, set `DATABASE_URL`,
+   `SESSION_SECRET`, and `CRON_SECRET` (any long random string — Vercel signs
+   its daily cron request with it automatically once it's set).
+3. Run `npm run migrate` once (locally, with `DATABASE_URL` pointed at Neon)
+   to apply the schema, then `npm run seed` if it's a fresh database.
+4. Push to the connected GitHub repo — Vercel builds `api/index.ts` as the
+   serverless entry point (see `vercel.json`) and deploys automatically.
+
+Migrations are **not** run automatically on deploy or on cold start (to avoid
+concurrent invocations racing to apply the same migration) — re-run
+`npm run migrate` by hand after pulling schema changes.
 
 ### Test accounts
 
@@ -51,24 +80,12 @@ forced to change it on first login (AUTH-03).
 | `RMC-1042`| Employee (Lab Technician)         | Faisal Al-Qahtani  |
 | `RMC-1043`| Employee (Lab Technician)         | Huda Al-Mutairi    |
 
-## Moving to another device
-
-Since everything is one SQLite file, moving hosts is just:
-
-1. Copy the whole project folder (or `git clone` the repo) to the new machine.
-2. Copy `data/raseel-mc.db` across too if you want to keep existing data —
-   otherwise `npm run seed` creates a fresh one.
-3. `npm install && npm run build && npm start`.
-
-No database server, no separate install step, on either machine.
-
 ## Backups (NF-05)
 
-`scripts/backup-db.ps1` copies the database file with a timestamp into
-`data/backups/` and prunes backups older than 30 days. Schedule it nightly
-via Windows Task Scheduler (see the comment at the top of the script for the
-exact setup) — there's nothing else to back up since the app has no other
-persistent state.
+Neon takes continuous backups itself (point-in-time restore, varies by
+plan) — there's no separate backup script to run now that the database
+isn't a local file. `scripts/backup-db.ps1` is left over from the SQLite
+setup and no longer applies.
 
 ## What's built (BRD Phase 1)
 

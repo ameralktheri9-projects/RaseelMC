@@ -1,8 +1,10 @@
 import express from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import cookieParser from "cookie-parser";
 import path from "node:path";
 import { config } from "./config";
+import { pool } from "./db";
 import { attachLocals } from "./middleware/auth";
 import { t, dirFor } from "./i18n";
 import { authRouter } from "./routes/auth";
@@ -31,8 +33,10 @@ export function createApp(): express.Express {
     express.static(path.join(__dirname, "..", "node_modules", "bootstrap", "dist"))
   );
 
+  const PgSession = connectPgSimple(session);
   app.use(
     session({
+      store: new PgSession({ pool, tableName: "user_sessions", createTableIfMissing: true }),
       secret: config.sessionSecret,
       resave: false,
       saveUninitialized: false,
@@ -74,6 +78,12 @@ export function createApp(): express.Express {
 
   app.use((_req, res) => {
     res.status(404).render("errors/404", { title: "Not found" });
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(err);
+    res.status(500).render("errors/500", { title: "Error", lang: "en" });
   });
 
   return app;

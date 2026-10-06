@@ -3,12 +3,21 @@ import { config } from "./config";
 import { runMigrations } from "./db/migrate";
 import { scheduleJobs } from "./jobs";
 
-runMigrations();
+async function main() {
+  await runMigrations();
 
-const app = createApp();
+  const app = createApp();
 
-scheduleJobs();
+  if (!config.isServerless) {
+    scheduleJobs();
+  }
 
-app.listen(config.port, () => {
-  console.log(`Raseel MC running at http://localhost:${config.port}`);
+  app.listen(config.port, () => {
+    console.log(`Raseel MC running at http://localhost:${config.port}`);
+  });
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });

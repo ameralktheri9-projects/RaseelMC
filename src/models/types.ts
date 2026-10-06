@@ -205,6 +205,8 @@ export interface LeaveRequest {
   reason: string | null;
   handover_employee_id: number | null;
   attachment_path: string | null;
+  attachment_data: Buffer | null;
+  attachment_mimetype: string | null;
   status: LeaveRequestStatus;
   current_step_order: number;
   workflow_id: number | null;

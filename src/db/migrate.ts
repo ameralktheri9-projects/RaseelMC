@@ -1,26 +1,25 @@
 import fs from "node:fs";
 import path from "node:path";
-import { db } from "./index";
+import { pool } from "./index";
 
 const MIGRATIONS_DIR = path.join(__dirname, "migrations");
 
-function ensureMigrationsTable() {
-  db.exec(`
+async function ensureMigrationsTable(): Promise<void> {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       filename TEXT PRIMARY KEY,
-      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+      applied_at TEXT NOT NULL DEFAULT (to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))
     )
   `);
 }
 
-export function runMigrations(): void {
-  ensureMigrationsTable();
+export async function runMigrations(): Promise<void> {
+  await ensureMigrationsTable();
 
-  const applied = new Set(
-    (db.prepare("SELECT filename FROM schema_migrations").all() as { filename: string }[]).map(
-      (r) => r.filename
-    )
+  const appliedResult = await pool.query<{ filename: string }>(
+    "SELECT filename FROM schema_migrations"
   );
+  const applied = new Set(appliedResult.rows.map((r) => r.filename));
 
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
@@ -31,19 +30,29 @@ export function runMigrations(): void {
     if (applied.has(file)) continue;
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
     console.log(`Applying migration: ${file}`);
-    db.exec("BEGIN");
+    const client = await pool.connect();
     try {
-      db.exec(sql);
-      db.prepare("INSERT INTO schema_migrations (filename) VALUES (?)").run(file);
-      db.exec("COMMIT");
+      await client.query("BEGIN");
+      await client.query(sql);
+      await client.query("INSERT INTO schema_migrations (filename) VALUES ($1)", [file]);
+      await client.query("COMMIT");
     } catch (err) {
-      db.exec("ROLLBACK");
+      await client.query("ROLLBACK");
       throw new Error(`Migration ${file} failed: ${(err as Error).message}`);
+    } finally {
+      client.release();
     }
   }
 }
 
 if (require.main === module) {
-  runMigrations();
-  console.log("Migrations complete.");
+  runMigrations()
+    .then(() => {
+      console.log("Migrations complete.");
+      return pool.end();
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }

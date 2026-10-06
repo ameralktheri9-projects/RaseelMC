@@ -19,18 +19,18 @@ export interface RequestContext {
   amount?: number;
 }
 
-export function employeeIdToUserId(employeeId: number | null): number | null {
+export async function employeeIdToUserId(employeeId: number | null): Promise<number | null> {
   if (employeeId == null) return null;
   const row = asRow<{ id: number } | undefined>(
-    db.prepare("SELECT id FROM users WHERE employee_id = ? AND is_active = 1").get(employeeId)
+    await db.prepare("SELECT id FROM users WHERE employee_id = ? AND is_active = 1").get(employeeId)
   );
   return row?.id ?? null;
 }
 
 /** WF-05: pick the most specific active workflow matching this request's context; fall back to the default. */
-export function resolveWorkflow(requestType: RequestType, ctx: RequestContext): Workflow {
+export async function resolveWorkflow(requestType: RequestType, ctx: RequestContext): Promise<Workflow> {
   const workflows = asRow<Workflow[]>(
-    db.prepare("SELECT * FROM workflows WHERE request_type = ? AND is_active = 1").all(requestType)
+    await db.prepare("SELECT * FROM workflows WHERE request_type = ? AND is_active = 1").all(requestType)
   );
 
   let best: { workflow: Workflow; score: number } | null = null;
@@ -77,7 +77,7 @@ export function resolveWorkflow(requestType: RequestType, ctx: RequestContext): 
   if (best) return best.workflow;
 
   const fallback = asRow<Workflow | undefined>(
-    db
+    await db
       .prepare("SELECT * FROM workflows WHERE request_type = ? AND is_default = 1 AND is_active = 1")
       .get(requestType)
   );
@@ -87,40 +87,40 @@ export function resolveWorkflow(requestType: RequestType, ctx: RequestContext): 
   return fallback;
 }
 
-export function getWorkflowSteps(workflowId: number): WorkflowStep[] {
+export async function getWorkflowSteps(workflowId: number): Promise<WorkflowStep[]> {
   return asRow<WorkflowStep[]>(
-    db
+    await db
       .prepare("SELECT * FROM workflow_steps WHERE workflow_id = ? ORDER BY step_order")
       .all(workflowId)
   );
 }
 
 /** Resolve a step's approver_type/value to a concrete user id, honoring an active delegation if present. */
-export function resolveStepApproverUserId(
+export async function resolveStepApproverUserId(
   step: WorkflowStep,
   employee: Employee
-): { userId: number | null; delegatedFromUserId: number | null } {
+): Promise<{ userId: number | null; delegatedFromUserId: number | null }> {
   let resolvedUserId: number | null = null;
 
   switch (step.approver_type) {
     case "direct_manager":
-      resolvedUserId = employeeIdToUserId(employee.direct_manager_id);
+      resolvedUserId = await employeeIdToUserId(employee.direct_manager_id);
       break;
     case "department_head": {
       if (employee.department_id == null) break;
       const dept = asRow<Department | undefined>(
-        db.prepare("SELECT * FROM departments WHERE id = ?").get(employee.department_id)
+        await db.prepare("SELECT * FROM departments WHERE id = ?").get(employee.department_id)
       );
-      resolvedUserId = employeeIdToUserId(dept?.head_employee_id ?? null);
+      resolvedUserId = await employeeIdToUserId(dept?.head_employee_id ?? null);
       break;
     }
     case "org_role": {
       const assignment = asRow<{ employee_id: number } | undefined>(
-        db
+        await db
           .prepare("SELECT employee_id FROM org_role_assignments WHERE org_role = ?")
           .get(step.approver_org_role)
       );
-      resolvedUserId = employeeIdToUserId(assignment?.employee_id ?? null);
+      resolvedUserId = await employeeIdToUserId(assignment?.employee_id ?? null);
       break;
     }
     case "specific_user":
@@ -134,7 +134,7 @@ export function resolveStepApproverUserId(
 
   const today = dayjs().format("YYYY-MM-DD");
   const delegation = asRow<{ delegate_user_id: number } | undefined>(
-    db
+    await db
       .prepare(
         `SELECT delegate_user_id FROM delegations
          WHERE approver_user_id = ? AND start_date <= ? AND end_date >= ?
@@ -158,14 +158,14 @@ export interface ResolvedStep {
 }
 
 /** Builds the full route for a request, applying the skip-duplicate-approver rule (WF-08). */
-export function buildApprovalRoute(workflow: Workflow, employee: Employee): ResolvedStep[] {
-  const steps = getWorkflowSteps(workflow.id);
-  const requesterUserId = employeeIdToUserId(employee.id);
+export async function buildApprovalRoute(workflow: Workflow, employee: Employee): Promise<ResolvedStep[]> {
+  const steps = await getWorkflowSteps(workflow.id);
+  const requesterUserId = await employeeIdToUserId(employee.id);
   const route: ResolvedStep[] = [];
   let previousApproverUserId: number | null = null;
 
   for (const step of steps) {
-    const { userId, delegatedFromUserId } = resolveStepApproverUserId(step, employee);
+    const { userId, delegatedFromUserId } = await resolveStepApproverUserId(step, employee);
     let skipped = false;
 
     if (workflow.skip_duplicate_approver) {
@@ -181,7 +181,7 @@ export function buildApprovalRoute(workflow: Workflow, employee: Employee): Reso
   return route;
 }
 
-function recordAction(
+async function recordAction(
   requestType: RequestType,
   requestId: number,
   stepOrder: number,
@@ -189,8 +189,8 @@ function recordAction(
   delegatedFromUserId: number | null,
   action: ApprovalActionType,
   comment: string | null
-): void {
-  db.prepare(
+): Promise<void> {
+  await db.prepare(
     `INSERT INTO approval_actions
       (request_type, request_id, step_order, approver_user_id, acted_as_delegate_for_user_id, action, comment)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -203,42 +203,42 @@ const TABLE_BY_TYPE: Record<RequestType, string> = {
 };
 
 /** Submits a request: attaches the resolved workflow/version, auto-skips steps, lands on the first live step. */
-export function submitRequest(
+export async function submitRequest(
   requestType: RequestType,
   requestId: number,
   employee: Employee,
   ctx: RequestContext
-): void {
-  const workflow = resolveWorkflow(requestType, ctx);
-  const route = buildApprovalRoute(workflow, employee);
+): Promise<void> {
+  const workflow = await resolveWorkflow(requestType, ctx);
+  const route = await buildApprovalRoute(workflow, employee);
   const table = TABLE_BY_TYPE[requestType];
 
   const firstLive = route.find((r) => !r.skipped);
   const landingStep = firstLive ?? route[route.length - 1];
 
-  db.prepare(
+  await db.prepare(
     `UPDATE ${table} SET workflow_id = ?, workflow_version = ?, status = 'pending', current_step_order = ? WHERE id = ?`
   ).run(workflow.id, workflow.version, landingStep?.stepOrder ?? 1, requestId);
 
-  recordAction(requestType, requestId, 0, employeeIdToUserId(employee.id), null, "submitted", null);
+  await recordAction(requestType, requestId, 0, await employeeIdToUserId(employee.id), null, "submitted", null);
 
   for (const r of route) {
     if (r.skipped) {
-      recordAction(requestType, requestId, r.stepOrder, r.approverUserId, r.delegatedFromUserId, "skipped", null);
+      await recordAction(requestType, requestId, r.stepOrder, r.approverUserId, r.delegatedFromUserId, "skipped", null);
     }
     if (r === landingStep) break;
   }
 
   // 6.5: "Request submitted" -> employee (confirmation), Step 1 approver.
-  const requesterUserId = employeeIdToUserId(employee.id);
+  const requesterUserId = await employeeIdToUserId(employee.id);
   const label = requestType === "leave" ? "leave request" : "loan request";
   const labelAr = requestType === "leave" ? "طلب الإجازة" : "طلب السلفة";
   const link = `/${requestType === "leave" ? "leave" : "loans"}/${requestId}`;
   if (requesterUserId != null) {
-    notify(requesterUserId, "request_submitted", `Your ${label} was submitted.`, `تم إرسال ${labelAr}.`, link);
+    await notify(requesterUserId, "request_submitted", `Your ${label} was submitted.`, `تم إرسال ${labelAr}.`, link);
   }
   if (landingStep?.approverUserId != null) {
-    notify(
+    await notify(
       landingStep.approverUserId,
       "request_submitted",
       `A new ${label} is waiting on your approval.`,
@@ -254,66 +254,67 @@ export interface AdvanceResult {
 }
 
 /** Approver acts on the current step: approve moves to the next live step (or finalizes); reject/return end it. */
-export function advanceRequest(
+export async function advanceRequest(
   requestType: RequestType,
   requestId: number,
   employee: Employee,
   actingUserId: number,
   action: "approved" | "rejected" | "returned",
   comment: string | null
-): AdvanceResult {
+): Promise<AdvanceResult> {
   const table = TABLE_BY_TYPE[requestType];
   const request = asRow<{ workflow_id: number; current_step_order: number } | undefined>(
-    db.prepare(`SELECT workflow_id, current_step_order FROM ${table} WHERE id = ?`).get(requestId)
+    await db.prepare(`SELECT workflow_id, current_step_order FROM ${table} WHERE id = ?`).get(requestId)
   );
   if (!request || request.workflow_id == null) {
     throw new Error("Request has no workflow attached.");
   }
 
   const workflow = asRow<Workflow>(
-    db.prepare("SELECT * FROM workflows WHERE id = ?").get(request.workflow_id)
+    await db.prepare("SELECT * FROM workflows WHERE id = ?").get(request.workflow_id)
   );
-  const route = buildApprovalRoute(workflow, employee);
+  const route = await buildApprovalRoute(workflow, employee);
   const currentIndex = route.findIndex((r) => r.stepOrder === request.current_step_order);
   const currentStep = route[currentIndex];
 
-  recordAction(requestType, requestId, request.current_step_order, actingUserId, null, action, comment);
+  await recordAction(requestType, requestId, request.current_step_order, actingUserId, null, action, comment);
 
-  const requesterUserId = employeeIdToUserId(employee.id);
+  const requesterUserId = await employeeIdToUserId(employee.id);
   const label = requestType === "leave" ? "request" : "loan request";
   const labelAr = requestType === "leave" ? "الطلب" : "طلب السلفة";
   const link = `/${requestType === "leave" ? "leave" : "loans"}/${requestId}`;
 
   if (action === "rejected") {
-    db.prepare(`UPDATE ${table} SET status = 'rejected' WHERE id = ?`).run(requestId);
+    await db.prepare(`UPDATE ${table} SET status = 'rejected' WHERE id = ?`).run(requestId);
     if (requesterUserId != null) {
-      notify(requesterUserId, "request_rejected", `Your ${label} was rejected.${comment ? ` Reason: ${comment}` : ""}`, `تم رفض ${labelAr}.${comment ? ` السبب: ${comment}` : ""}`, link);
+      await notify(requesterUserId, "request_rejected", `Your ${label} was rejected.${comment ? ` Reason: ${comment}` : ""}`, `تم رفض ${labelAr}.${comment ? ` السبب: ${comment}` : ""}`, link);
     }
     return { newStatus: "rejected", finalized: true };
   }
   if (action === "returned") {
-    db.prepare(`UPDATE ${table} SET status = 'returned' WHERE id = ?`).run(requestId);
+    await db.prepare(`UPDATE ${table} SET status = 'returned' WHERE id = ?`).run(requestId);
     if (requesterUserId != null) {
-      notify(requesterUserId, "request_returned", `Your ${label} was returned for edit.${comment ? ` Note: ${comment}` : ""}`, `تمت إعادة ${labelAr} للتعديل.${comment ? ` ملاحظة: ${comment}` : ""}`, link);
+      await notify(requesterUserId, "request_returned", `Your ${label} was returned for edit.${comment ? ` Note: ${comment}` : ""}`, `تمت إعادة ${labelAr} للتعديل.${comment ? ` ملاحظة: ${comment}` : ""}`, link);
     }
     return { newStatus: "returned", finalized: true };
   }
 
   // approved
   if (currentStep?.step.is_final) {
-    db.prepare(`UPDATE ${table} SET status = 'approved' WHERE id = ?`).run(requestId);
+    await db.prepare(`UPDATE ${table} SET status = 'approved' WHERE id = ?`).run(requestId);
     if (requesterUserId != null) {
-      notify(requesterUserId, "request_approved", `Your ${label} was approved.`, `تمت الموافقة على ${labelAr}.`, link);
+      await notify(requesterUserId, "request_approved", `Your ${label} was approved.`, `تمت الموافقة على ${labelAr}.`, link);
     }
-    for (const hr of asRow<{ id: number }[]>(
-      db
+    const hrUsers = asRow<{ id: number }[]>(
+      await db
         .prepare(
           `SELECT u.id FROM users u JOIN user_roles ur ON ur.user_id = u.id
            WHERE ur.role = ? AND u.is_active = 1`
         )
         .all(requestType === "loan" ? "finance" : "hr_officer")
-    )) {
-      notify(hr.id, "request_approved", `A ${label} was fully approved.`, `تمت الموافقة النهائية على ${labelAr}.`, link);
+    );
+    for (const hr of hrUsers) {
+      await notify(hr.id, "request_approved", `A ${label} was fully approved.`, `تمت الموافقة النهائية على ${labelAr}.`, link);
     }
     return { newStatus: "approved", finalized: true };
   }
@@ -321,33 +322,33 @@ export function advanceRequest(
   const nextLive = route.slice(currentIndex + 1).find((r) => !r.skipped);
   for (const r of route.slice(currentIndex + 1)) {
     if (r.skipped) {
-      recordAction(requestType, requestId, r.stepOrder, r.approverUserId, r.delegatedFromUserId, "skipped", null);
+      await recordAction(requestType, requestId, r.stepOrder, r.approverUserId, r.delegatedFromUserId, "skipped", null);
     }
     if (r === nextLive) break;
   }
 
   if (!nextLive) {
     // No further live steps resolved (shouldn't normally happen if the final step is reachable) -> approve.
-    db.prepare(`UPDATE ${table} SET status = 'approved' WHERE id = ?`).run(requestId);
+    await db.prepare(`UPDATE ${table} SET status = 'approved' WHERE id = ?`).run(requestId);
     return { newStatus: "approved", finalized: true };
   }
 
-  db.prepare(`UPDATE ${table} SET status = 'pending', current_step_order = ? WHERE id = ?`).run(
+  await db.prepare(`UPDATE ${table} SET status = 'pending', current_step_order = ? WHERE id = ?`).run(
     nextLive.stepOrder,
     requestId
   );
 
   if (requesterUserId != null) {
-    notify(requesterUserId, "step_approved", `Your ${label} moved to the next approval step.`, `انتقل ${labelAr} إلى خطوة الموافقة التالية.`, link);
+    await notify(requesterUserId, "step_approved", `Your ${label} moved to the next approval step.`, `انتقل ${labelAr} إلى خطوة الموافقة التالية.`, link);
   }
   if (nextLive.approverUserId != null) {
-    notify(nextLive.approverUserId, "step_approved", `A ${label} is waiting on your approval.`, `يوجد ${labelAr} بانتظار موافقتك.`, "/approvals");
+    await notify(nextLive.approverUserId, "step_approved", `A ${label} is waiting on your approval.`, `يوجد ${labelAr} بانتظار موافقتك.`, "/approvals");
   }
 
   return { newStatus: "pending", finalized: false };
 }
 
-export function getApprovalTrail(requestType: RequestType, requestId: number) {
+export async function getApprovalTrail(requestType: RequestType, requestId: number) {
   return db
     .prepare(
       `SELECT aa.*, u.username as approver_username, e.name_en as approver_name_en, e.name_ar as approver_name_ar
@@ -361,8 +362,8 @@ export function getApprovalTrail(requestType: RequestType, requestId: number) {
 }
 
 /** Pending-my-approval list for a given user, across leave and loan requests. */
-export function getPendingApprovalsForUser(userId: number) {
-  const leave = db
+export async function getPendingApprovalsForUser(userId: number) {
+  const leave = (await db
     .prepare(
       `SELECT 'leave' as request_type, lr.id, lr.current_step_order, lr.created_at,
               e.name_en, e.name_ar, lt.name_en as sub_type, lr.working_days as amount_or_days
@@ -372,9 +373,9 @@ export function getPendingApprovalsForUser(userId: number) {
        JOIN workflow_steps ws ON ws.workflow_id = lr.workflow_id AND ws.step_order = lr.current_step_order
        WHERE lr.status = 'pending'`
     )
-    .all() as any[];
+    .all()) as any[];
 
-  const loan = db
+  const loan = (await db
     .prepare(
       `SELECT 'loan' as request_type, lo.id, lo.current_step_order, lo.created_at,
               e.name_en, e.name_ar, 'Loan' as sub_type, lo.amount as amount_or_days
@@ -382,13 +383,13 @@ export function getPendingApprovalsForUser(userId: number) {
        JOIN employees e ON e.id = lo.employee_id
        WHERE lo.status = 'pending'`
     )
-    .all() as any[];
+    .all()) as any[];
 
   const all = [...leave, ...loan];
   const result = [];
   for (const r of all) {
     const employee = asRow<Employee>(
-      db
+      await db
         .prepare(
           `SELECT e.* FROM employees e
            JOIN ${r.request_type === "leave" ? "leave_requests" : "loan_requests"} req ON req.employee_id = e.id
@@ -397,7 +398,7 @@ export function getPendingApprovalsForUser(userId: number) {
         .get(r.id)
     );
     const workflow = asRow<Workflow | undefined>(
-      db
+      await db
         .prepare(
           `SELECT w.* FROM workflows w
            JOIN ${r.request_type === "leave" ? "leave_requests" : "loan_requests"} req ON req.workflow_id = w.id
@@ -406,7 +407,7 @@ export function getPendingApprovalsForUser(userId: number) {
         .get(r.id)
     );
     if (!workflow) continue;
-    const route = buildApprovalRoute(workflow, employee);
+    const route = await buildApprovalRoute(workflow, employee);
     const step = route.find((s) => s.stepOrder === r.current_step_order);
     if (step && !step.skipped && step.approverUserId === userId) {
       result.push(r);

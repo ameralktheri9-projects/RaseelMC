@@ -7,7 +7,9 @@ export const config = {
   lockoutThreshold: 5, // AUTH-05
   lockoutDurationMs: 15 * 60 * 1000, // AUTH-05
   passwordExpiryDays: 90, // AUTH-04 default, configurable later
-  attachmentsDir: process.env.ATTACHMENTS_DIR || "data/attachments",
   maxAttachmentBytes: 5 * 1024 * 1024, // LV-12: 5MB
   isProduction: process.env.NODE_ENV === "production",
+  // Vercel sets this automatically in every deployment (including local `vercel dev`).
+  isServerless: process.env.VERCEL === "1",
+  cronSecret: process.env.CRON_SECRET || "",
 };

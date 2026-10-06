@@ -130,24 +130,24 @@ export function computeCarryOver(
   return { carried, lapsed };
 }
 
-export function getHolidays(): Holiday[] {
-  return asRow<Holiday[]>(db.prepare("SELECT * FROM holidays ORDER BY holiday_date").all());
+export async function getHolidays(): Promise<Holiday[]> {
+  return asRow<Holiday[]>(await db.prepare("SELECT * FROM holidays ORDER BY holiday_date").all());
 }
 
-export function getEntitlementRules(): LeaveEntitlementRule[] {
+export async function getEntitlementRules(): Promise<LeaveEntitlementRule[]> {
   return asRow<LeaveEntitlementRule[]>(
-    db.prepare("SELECT * FROM leave_entitlement_rules ORDER BY min_years_service").all()
+    await db.prepare("SELECT * FROM leave_entitlement_rules ORDER BY min_years_service").all()
   );
 }
 
-export function getOrCreateLeaveBalanceRow(
+export async function getOrCreateLeaveBalanceRow(
   employeeId: number,
   leaveTypeId: number,
   leaveYearStart: string,
   leaveYearEnd: string,
   entitlement: number
-): LeaveBalance {
-  const existing = db
+): Promise<LeaveBalance> {
+  const existing = await db
     .prepare(
       "SELECT * FROM leave_balances WHERE employee_id = ? AND leave_type_id = ? AND leave_year_start = ?"
     )
@@ -155,14 +155,14 @@ export function getOrCreateLeaveBalanceRow(
   const existingRow = asRow<LeaveBalance | undefined>(existing);
   if (existingRow) return existingRow;
 
-  db.prepare(
+  await db.prepare(
     `INSERT INTO leave_balances
       (employee_id, leave_type_id, leave_year_start, leave_year_end, entitlement, carried_over, taken, manual_adjustment)
      VALUES (?, ?, ?, ?, ?, 0, 0, 0)`
   ).run(employeeId, leaveTypeId, leaveYearStart, leaveYearEnd, entitlement);
 
   return asRow<LeaveBalance>(
-    db
+    await db
       .prepare(
         "SELECT * FROM leave_balances WHERE employee_id = ? AND leave_type_id = ? AND leave_year_start = ?"
       )
@@ -170,12 +170,12 @@ export function getOrCreateLeaveBalanceRow(
   );
 }
 
-export function getPendingLeaveDays(employeeId: number, leaveTypeId: number): number {
-  const row = db
+export async function getPendingLeaveDays(employeeId: number, leaveTypeId: number): Promise<number> {
+  const row = (await db
     .prepare(
       `SELECT COALESCE(SUM(working_days), 0) as total FROM leave_requests
        WHERE employee_id = ? AND leave_type_id = ? AND status = 'pending'`
     )
-    .get(employeeId, leaveTypeId) as { total: number };
+    .get(employeeId, leaveTypeId)) as { total: number };
   return row.total;
 }

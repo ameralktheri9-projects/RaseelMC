@@ -3,7 +3,7 @@
 -- exceptions in loan rules / workflow conditions later).
 
 CREATE TABLE positions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name_en TEXT NOT NULL,
   name_ar TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1
