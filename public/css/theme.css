@@ -121,16 +121,20 @@ hr { border: 0; border-top: 1px solid var(--line); }
 .g-3 > .col, .g-3 > [class*="col-"] { margin-bottom: 16px; }
 .col-3 { flex: 0 0 25%; max-width: 25%; }
 .col-6 { flex: 0 0 50%; max-width: 50%; }
-@media (min-width: 992px) {
-  .d-lg-flex { display: flex !important; }
-  .d-lg-none { display: none !important; }
-  .d-lg-block { display: block !important; }
-}
 .d-flex { display: flex !important; }
 .d-inline { display: inline !important; }
 .d-none { display: none !important; }
 .d-block { display: block !important; }
 .d-inline-block { display: inline-block !important; }
+/* These three must come AFTER the base d-flex/d-none/etc above: with equal specificity and
+   !important on both sides, the tie between "hidden below lg" (.d-none) and "shown at lg+"
+   (.d-lg-flex) on the same element is broken purely by source order, not by which media query
+   currently matches — so the responsive override has to be declared later to actually win. */
+@media (min-width: 992px) {
+  .d-lg-flex { display: flex !important; }
+  .d-lg-none { display: none !important; }
+  .d-lg-block { display: block !important; }
+}
 .position-absolute { position: absolute; }
 .form-check-inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
 .flex-wrap { flex-wrap: wrap; }
@@ -270,6 +274,11 @@ input[type="file"].form-control { padding: 8px 12px; height: auto; }
 .input-group .form-control { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 [dir="rtl"] .input-group .form-control { border-radius: 9px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .input-group .form-select { width: auto; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.field-icon-wrap { position: relative; }
+.field-icon-wrap .field-icon { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); font-size: 15px; opacity: .55; pointer-events: none; }
+.field-icon-wrap input { padding-left: 40px; }
+[dir="rtl"] .field-icon-wrap .field-icon { left: auto; right: 14px; }
+[dir="rtl"] .field-icon-wrap input { padding-left: 12px; padding-right: 40px; }
 .search { height: 40px; width: 270px; border: 1px solid var(--line); border-radius: 9px; background: #fbfcfe; padding: 0 12px; color: var(--muted); outline: none; }
 
 .form-grid { display: grid; grid-template-columns: 1.35fr .8fr; gap: 15px; }
@@ -379,7 +388,10 @@ td strong { font-weight: 600; }
 
 /* ---------- Auth (login / change-password) pages ---------- */
 .auth-shell { min-height: 100vh; display: flex; }
-.auth-brand-panel { background: linear-gradient(160deg, var(--deep) 0%, #082a52 100%); color: #fff; min-height: 100vh; padding: 3rem; display: flex; flex-direction: column; justify-content: center; }
+.auth-brand-panel { background: linear-gradient(160deg, var(--deep) 0%, #082a52 100%); color: #fff; min-height: 100vh; padding: 3rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+.auth-brand-panel > div { position: relative; z-index: 1; }
+.auth-brand-watermark { position: absolute; top: 50%; right: -8%; width: 60%; max-width: 420px; transform: translateY(-50%); opacity: .14; filter: brightness(0) invert(1); pointer-events: none; }
+[dir="rtl"] .auth-brand-watermark { right: auto; left: -8%; }
 .auth-brand-panel .badge-pill { background: rgba(255,255,255,.12); color: #cfe0ff; font-size: .75rem; letter-spacing: .04em; padding: .3rem .75rem; border-radius: 999px; display: inline-flex; align-items: center; gap: .4rem; margin-bottom: 2rem; width: max-content; }
 .auth-brand-panel ul { list-style: none; padding: 0; margin-top: 1.5rem; }
 .auth-brand-panel ul li { padding-left: 1.2rem; position: relative; margin-bottom: .6rem; color: #d8e3fb; }

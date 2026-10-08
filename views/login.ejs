@@ -2,6 +2,7 @@
 
 <div class="auth-shell row g-0">
   <div class="col-lg-6 d-none d-lg-flex auth-brand-panel">
+    <img src="/images/icon.png" alt="" class="auth-brand-watermark">
     <div>
       <div style="background:#fff;border-radius:12px;padding:10px 14px;display:inline-block;margin-bottom:28px;">
         <img src="/images/logo.png" alt="Raseel MC" style="height:34px;display:block;">
@@ -56,13 +57,19 @@
       <form method="POST" action="/login">
         <div class="mb-3">
           <label class="form-label fw-semibold"><%= t(lang, 'login.username') %></label>
-          <input type="text" name="username" class="form-control form-control-lg" autocomplete="username" required autofocus>
+          <div class="field-icon-wrap">
+            <span class="field-icon">&#128100;</span>
+            <input type="text" name="username" class="form-control form-control-lg" autocomplete="username" required autofocus>
+          </div>
         </div>
         <div class="mb-3">
           <div class="d-flex justify-content-between">
             <label class="form-label fw-semibold"><%= t(lang, 'login.password') %></label>
           </div>
-          <input type="password" name="password" class="form-control form-control-lg" autocomplete="current-password" required>
+          <div class="field-icon-wrap">
+            <span class="field-icon">&#128274;</span>
+            <input type="password" name="password" class="form-control form-control-lg" autocomplete="current-password" required>
+          </div>
         </div>
         <div class="form-check mb-4">
           <input class="form-check-input" type="checkbox" name="keepSignedIn" id="keepSignedIn">
