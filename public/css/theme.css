@@ -387,9 +387,26 @@ td strong { font-weight: 600; }
   display: flex; align-items: center; justify-content: center; line-height: 1; }
 
 /* ---------- Auth (login / change-password) pages ---------- */
+/* Deliberately not using the shared row / col-N / g-0 grid classes here: this is a one-off
+   2-panel split, and reusing the generic grid utilities on it already caused two separate
+   collisions (a stray max-width:50% on the form panel, then a grid padding reset zeroing this
+   panel's own padding) because those utilities are written to win via specificity whenever a
+   "col-" class is present, regardless of what else needs that space on this specific element. */
 .auth-shell { min-height: 100vh; display: flex; }
-.auth-brand-panel { background: linear-gradient(160deg, var(--deep) 0%, #082a52 100%); color: #fff; min-height: 100vh; padding: 3rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
-.auth-brand-panel > div { position: relative; z-index: 1; }
+.auth-brand-panel {
+  display: none;
+  background: linear-gradient(160deg, var(--deep) 0%, #082a52 100%); color: #fff; min-height: 100vh;
+  padding: 3rem; flex-direction: column; justify-content: center; position: relative; overflow: hidden;
+  flex: 0 0 50%; max-width: 50%;
+}
+@media (min-width: 992px) {
+  .auth-brand-panel { display: flex; }
+}
+/* min-width:0 overrides the flex item default of min-width:auto — without it, a flex child
+   containing long unbroken text (the heading/paragraph here) can refuse to shrink below its
+   content's natural width and overflow straight past the panel's own padding on both sides,
+   exactly like the clipped-at-the-screen-edge text this was causing. */
+.auth-brand-panel > div { position: relative; z-index: 1; min-width: 0; max-width: 560px; }
 .auth-brand-watermark { position: absolute; bottom: -8%; right: -6%; width: 32%; max-width: 240px; opacity: .14; filter: brightness(0) invert(1); pointer-events: none; }
 [dir="rtl"] .auth-brand-watermark { right: auto; left: -6%; }
 .auth-brand-panel .badge-pill { background: rgba(255,255,255,.12); color: #cfe0ff; font-size: .75rem; letter-spacing: .04em; padding: .3rem .75rem; border-radius: 999px; display: inline-flex; align-items: center; gap: .4rem; margin-bottom: 2rem; width: max-content; }
