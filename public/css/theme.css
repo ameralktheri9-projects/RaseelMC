@@ -390,8 +390,8 @@ td strong { font-weight: 600; }
 .auth-shell { min-height: 100vh; display: flex; }
 .auth-brand-panel { background: linear-gradient(160deg, var(--deep) 0%, #082a52 100%); color: #fff; min-height: 100vh; padding: 3rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
 .auth-brand-panel > div { position: relative; z-index: 1; }
-.auth-brand-watermark { position: absolute; top: 50%; right: -8%; width: 60%; max-width: 420px; transform: translateY(-50%); opacity: .14; filter: brightness(0) invert(1); pointer-events: none; }
-[dir="rtl"] .auth-brand-watermark { right: auto; left: -8%; }
+.auth-brand-watermark { position: absolute; bottom: -8%; right: -6%; width: 32%; max-width: 240px; opacity: .14; filter: brightness(0) invert(1); pointer-events: none; }
+[dir="rtl"] .auth-brand-watermark { right: auto; left: -6%; }
 .auth-brand-panel .badge-pill { background: rgba(255,255,255,.12); color: #cfe0ff; font-size: .75rem; letter-spacing: .04em; padding: .3rem .75rem; border-radius: 999px; display: inline-flex; align-items: center; gap: .4rem; margin-bottom: 2rem; width: max-content; }
 .auth-brand-panel ul { list-style: none; padding: 0; margin-top: 1.5rem; }
 .auth-brand-panel ul li { padding-left: 1.2rem; position: relative; margin-bottom: .6rem; color: #d8e3fb; }
