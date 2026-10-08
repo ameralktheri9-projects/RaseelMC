@@ -28,6 +28,14 @@ function getPool(): Pool {
     // which already multiplexes connections upstream via PgBouncer — this Pool just needs a handful.
     max: 5,
   });
+  // node-postgres emits 'error' on the pool whenever an *idle* client's connection drops (Neon
+  // recycles idle connections fairly aggressively) — with no listener, Node treats that as an
+  // uncaught exception and kills the whole process. The pool itself recovers fine on its own
+  // (it just discards that client and opens a new one on the next query), so this only needs
+  // to stop the crash, not actually handle anything.
+  realPool.on("error", (err) => {
+    console.error("Postgres pool idle client error (recovered automatically):", err.message);
+  });
   return realPool;
 }
 

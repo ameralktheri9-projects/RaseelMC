@@ -95,7 +95,7 @@ leaveRouter.post(
     const employee = await currentEmployee(req);
     const sessionUser = req.session.user!;
 
-    const { leaveTypeId, startDate, endDate, reason, handoverEmployeeId } = req.body as Record<string, string>;
+    const { leaveTypeId, startDate, endDate, reason, handoverEmployeeId, wantsExitReentry, wantsFlightTicket } = req.body as Record<string, string>;
 
     const leaveTypes = asRow<LeaveType[]>(
       await db.prepare("SELECT * FROM leave_types WHERE is_active = 1 ORDER BY id").all()
@@ -211,8 +211,8 @@ leaveRouter.post(
     const inserted = (await db
       .prepare(
         `INSERT INTO leave_requests
-          (employee_id, leave_type_id, start_date, end_date, working_days, reason, handover_employee_id, attachment_data, attachment_mimetype, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft') RETURNING id`
+          (employee_id, leave_type_id, start_date, end_date, working_days, reason, handover_employee_id, attachment_data, attachment_mimetype, wants_exit_reentry, wants_flight_ticket, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft') RETURNING id`
       )
       .get(
         employee.id,
@@ -223,7 +223,9 @@ leaveRouter.post(
         reason || null,
         handoverEmployeeId ? Number(handoverEmployeeId) : null,
         req.file ? req.file.buffer : null,
-        req.file ? req.file.mimetype : null
+        req.file ? req.file.mimetype : null,
+        wantsExitReentry ? 1 : 0,
+        wantsFlightTicket ? 1 : 0
       )) as { id: number };
     const requestId = inserted.id;
 

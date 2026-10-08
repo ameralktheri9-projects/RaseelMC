@@ -17,6 +17,12 @@
       <div class="text-muted small"><%= lang === 'ar' ? 'السبب' : 'Reason' %></div>
       <div><%= request.reason %></div>
     <% } %>
+    <% if (request.wants_exit_reentry || request.wants_flight_ticket) { %>
+      <hr>
+      <div class="text-muted small mb-1"><%= lang === 'ar' ? 'طلبات السفر' : 'Travel requests' %></div>
+      <% if (request.wants_exit_reentry) { %><span class="badge bg-light text-muted me-1"><%= lang === 'ar' ? 'تأشيرة خروج وعودة' : 'Exit re-entry' %></span><% } %>
+      <% if (request.wants_flight_ticket) { %><span class="badge bg-light text-muted"><%= lang === 'ar' ? 'تذكرة طيران' : 'Flight ticket' %></span><% } %>
+    <% } %>
   </div>
 </div>
 

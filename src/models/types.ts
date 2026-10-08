@@ -209,6 +209,8 @@ export interface LeaveRequest {
   attachment_path: string | null;
   attachment_data: Buffer | null;
   attachment_mimetype: string | null;
+  wants_exit_reentry: number;
+  wants_flight_ticket: number;
   status: LeaveRequestStatus;
   current_step_order: number;
   workflow_id: number | null;
