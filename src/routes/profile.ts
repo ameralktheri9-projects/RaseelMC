@@ -49,10 +49,11 @@ profileRouter.post(
       res.redirect("/profile");
       return;
     }
-    const { personalEmail, phone } = req.body as Record<string, string>;
-    await db.prepare("UPDATE employees SET personal_email = ?, phone = ? WHERE id = ?").run(
+    const { personalEmail, phone, dateOfBirth } = req.body as Record<string, string>;
+    await db.prepare("UPDATE employees SET personal_email = ?, phone = ?, date_of_birth = ? WHERE id = ?").run(
       personalEmail || null,
       phone || null,
+      dateOfBirth || null,
       sessionUser.employeeId
     );
     res.redirect("/profile?saved=1");

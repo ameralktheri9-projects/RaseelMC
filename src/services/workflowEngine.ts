@@ -168,8 +168,13 @@ export async function buildApprovalRoute(workflow: Workflow, employee: Employee)
     const { userId, delegatedFromUserId } = await resolveStepApproverUserId(step, employee);
     let skipped = false;
 
-    if (workflow.skip_duplicate_approver) {
-      if (userId != null && (userId === requesterUserId || userId === previousApproverUserId)) {
+    if (userId == null) {
+      // No one resolves for this step — most commonly a "direct manager" step for someone with
+      // no manager (a department head or the CEO submitting their own request). Skip straight to
+      // the next step instead of landing on a step nobody can ever approve.
+      skipped = true;
+    } else if (workflow.skip_duplicate_approver) {
+      if (userId === requesterUserId || userId === previousApproverUserId) {
         skipped = true;
       }
     }

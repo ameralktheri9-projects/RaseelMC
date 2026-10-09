@@ -69,7 +69,8 @@ export function computeLeaveBalance(params: {
 }): LeaveBalanceSummary {
   const { employee, asOf, entitlementRules, carriedOver, taken, pending, manualAdjustment } = params;
   const years = yearsOfService(employee.joining_date, asOf);
-  const fullYearEntitlement = resolveAnnualEntitlement(years, entitlementRules);
+  // A per-employee override (set in Settings > Users) always wins over the computed band.
+  const fullYearEntitlement = employee.annual_leave_override ?? resolveAnnualEntitlement(years, entitlementRules);
   const { start, end } = leaveYearWindow(employee.joining_date, asOf);
   const completedMonths = completedMonthsSince(start, asOf);
   const accruedToDate = roundToHalf((fullYearEntitlement / 12) * completedMonths);

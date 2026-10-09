@@ -3,78 +3,219 @@
 
 <a href="/settings/users" class="small d-inline-block mb-3">&larr; <%= t(lang, 'common.back') %></a>
 
-<div class="card">
-  <div class="card-body">
-    <h2 class="h5 mb-3"><%= lang === 'ar' ? 'تعديل موظف' : 'Edit employee' %> &middot; <%= employee.employee_code %></h2>
-    <form method="POST" action="/settings/users/<%= employee.id %>/edit">
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label small">Name (EN)</label>
-          <input name="nameEn" class="form-control" value="<%= employee.name_en %>" required>
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label small">الاسم (عربي)</label>
-          <input name="nameAr" class="form-control" value="<%= employee.name_ar %>" dir="rtl" required>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-4 mb-3">
-          <label class="form-label small"><%= lang === 'ar' ? 'القسم' : 'Department' %></label>
-          <select name="departmentId" class="form-select">
-            <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
-            <% departments.forEach(function(d) { %>
-              <option value="<%= d.id %>" <%= employee.department_id === d.id ? 'selected' : '' %>><%= lang === 'ar' ? d.name_ar : d.name_en %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="col-md-4 mb-3">
-          <label class="form-label small"><%= lang === 'ar' ? 'المسمى الوظيفي' : 'Position' %></label>
-          <select name="jobTitle" class="form-select">
-            <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
-            <% positions.forEach(function(p) { %>
-              <option value="<%= p.name_en %>" <%= employee.job_title === p.name_en ? 'selected' : '' %>><%= lang === 'ar' ? p.name_ar : p.name_en %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="col-md-4 mb-3">
-          <label class="form-label small"><%= lang === 'ar' ? 'الدرجة الوظيفية' : 'Job grade' %></label>
-          <input name="jobGrade" class="form-control" value="<%= employee.job_grade || '' %>">
+<form method="POST" action="/settings/users/<%= employee.id %>/edit">
+  <div class="row">
+    <div class="col-lg-8">
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'البيانات الشخصية' : 'Personal' %> &middot; <%= employee.employee_code %></h2>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label small">Name (EN)</label>
+              <input name="nameEn" class="form-control" value="<%= employee.name_en %>" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label small">الاسم (عربي)</label>
+              <input name="nameAr" class="form-control" value="<%= employee.name_ar %>" dir="rtl" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'الجنسية' : 'Nationality' %></label>
+              <select name="nationality" class="form-select">
+                <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+                <% nationalities.forEach(function(n) { %>
+                  <option value="<%= n.value %>" <%= employee.nationality === n.value ? 'selected' : '' %>><%= lang === 'ar' ? n.ar : n.en %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'تاريخ الميلاد' : 'Date of birth' %></label>
+              <input type="date" name="dateOfBirth" class="form-control" value="<%= employee.date_of_birth || '' %>">
+            </div>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <div class="col-md-4 mb-3">
-          <label class="form-label small"><%= lang === 'ar' ? 'المدير المباشر' : 'Direct manager' %></label>
-          <select name="directManagerId" class="form-select">
-            <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
-            <% employees.forEach(function(e) { %>
-              <option value="<%= e.id %>" <%= employee.direct_manager_id === e.id ? 'selected' : '' %>><%= lang === 'ar' ? e.name_ar : e.name_en %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="col-md-4 mb-3">
-          <label class="form-label small"><%= lang === 'ar' ? 'تاريخ التعيين' : 'Joining date' %></label>
-          <input type="date" name="joiningDate" class="form-control" value="<%= employee.joining_date %>" required>
-        </div>
-        <div class="col-md-4 mb-3">
-          <label class="form-label small"><%= lang === 'ar' ? 'الراتب الإجمالي' : 'Gross salary' %></label>
-          <input type="number" name="grossSalary" class="form-control" value="<%= employee.gross_salary || '' %>">
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'التوظيف' : 'Employment' %></h2>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'القسم' : 'Department' %></label>
+              <select name="departmentId" class="form-select">
+                <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+                <% departments.forEach(function(d) { %>
+                  <option value="<%= d.id %>" <%= employee.department_id === d.id ? 'selected' : '' %>><%= lang === 'ar' ? d.name_ar : d.name_en %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'المسمى الوظيفي' : 'Position' %></label>
+              <select name="jobTitle" class="form-select">
+                <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+                <% positions.forEach(function(p) { %>
+                  <option value="<%= p.name_en %>" <%= employee.job_title === p.name_en ? 'selected' : '' %>><%= lang === 'ar' ? p.name_ar : p.name_en %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'الدرجة الوظيفية' : 'Job grade' %></label>
+              <input name="jobGrade" class="form-control" value="<%= employee.job_grade || '' %>">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'المدير المباشر' : 'Direct manager' %></label>
+              <select name="directManagerId" class="form-select">
+                <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+                <% employees.forEach(function(e) { %>
+                  <option value="<%= e.id %>" <%= employee.direct_manager_id === e.id ? 'selected' : '' %>><%= lang === 'ar' ? e.name_ar : e.name_en %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'تاريخ التعيين' : 'Joining date' %></label>
+              <input type="date" name="joiningDate" class="form-control" value="<%= employee.joining_date %>" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'الحالة' : 'Status' %></label>
+              <select name="status" class="form-select">
+                <option value="active" <%= employee.status === 'active' ? 'selected' : '' %>><%= lang === 'ar' ? 'نشط' : 'Active' %></option>
+                <option value="on_leave" <%= employee.status === 'on_leave' ? 'selected' : '' %>><%= lang === 'ar' ? 'في إجازة' : 'On leave' %></option>
+                <option value="terminated" <%= employee.status === 'terminated' ? 'selected' : '' %>><%= lang === 'ar' ? 'منتهي الخدمة' : 'Terminated' %></option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'تاريخ بداية العقد' : 'Contract start date' %></label>
+              <input type="date" name="contractStartDate" class="form-control" value="<%= employee.contract_start_date || '' %>">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'تاريخ نهاية العقد' : 'Contract end date' %></label>
+              <input type="text" class="form-control" value="<%= employee.contract_end_date || (lang === 'ar' ? 'يُحتسب تلقائياً' : 'Calculated automatically') %>" disabled>
+              <div class="form-text"><%= lang === 'ar' ? 'سنتان من تاريخ بداية العقد' : '2 years from the contract start date' %></div>
+            </div>
+            <div class="col-md-2 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'السجل التجاري' : 'Commercial reg.' %></label>
+              <select name="crType" class="form-select">
+                <option value="">--</option>
+                <% crTypes.forEach(function(c) { %>
+                  <option value="<%= c.value %>" <%= employee.cr_type === c.value ? 'selected' : '' %>><%= lang === 'ar' ? c.ar : c.en %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-2 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'الكفالة' : 'Sponsorship' %></label>
+              <select name="sponsorshipType" class="form-select">
+                <option value="">--</option>
+                <% sponsorshipTypes.forEach(function(s) { %>
+                  <option value="<%= s.value %>" <%= employee.sponsorship_type === s.value ? 'selected' : '' %>><%= lang === 'ar' ? s.ar : s.en %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="mb-3">
-        <label class="form-label small"><%= lang === 'ar' ? 'الحالة' : 'Status' %></label>
-        <select name="status" class="form-select" style="max-width: 220px;">
-          <option value="active" <%= employee.status === 'active' ? 'selected' : '' %>><%= lang === 'ar' ? 'نشط' : 'Active' %></option>
-          <option value="on_leave" <%= employee.status === 'on_leave' ? 'selected' : '' %>><%= lang === 'ar' ? 'في إجازة' : 'On leave' %></option>
-          <option value="terminated" <%= employee.status === 'terminated' ? 'selected' : '' %>><%= lang === 'ar' ? 'منتهي الخدمة' : 'Terminated' %></option>
-        </select>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'الراتب' : 'Salary' %></h2>
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'الأساسي' : 'Basic' %></label>
+              <input type="number" step="0.01" name="salaryBasic" class="form-control salary-part" value="<%= employee.salary_basic ?? '' %>">
+            </div>
+            <div class="col-md-3 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'بدل السكن' : 'Housing' %></label>
+              <input type="number" step="0.01" name="salaryHousing" class="form-control salary-part" value="<%= employee.salary_housing ?? '' %>">
+            </div>
+            <div class="col-md-3 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'بدل النقل' : 'Transport' %></label>
+              <input type="number" step="0.01" name="salaryTransport" class="form-control salary-part" value="<%= employee.salary_transport ?? '' %>">
+            </div>
+            <div class="col-md-3 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'بدلات أخرى' : 'Other' %></label>
+              <input type="number" step="0.01" name="salaryOther" class="form-control salary-part" value="<%= employee.salary_other ?? '' %>">
+            </div>
+          </div>
+          <div class="info-row">
+            <span><%= lang === 'ar' ? 'الإجمالي (يُحتسب تلقائياً)' : 'Total (auto-calculated)' %></span>
+            <strong id="salaryTotal">SAR <%= (employee.gross_salary || 0).toFixed(2) %></strong>
+          </div>
+        </div>
       </div>
-      <div class="d-flex gap-2">
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'الحساب البنكي' : 'Bank account' %></h2>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'اسم البنك' : 'Bank name' %></label>
+              <select name="bankName" class="form-select">
+                <option value="">-- <%= lang === 'ar' ? 'بدون' : 'None' %> --</option>
+                <% banks.forEach(function(b) { %>
+                  <option value="<%= b.value %>" <%= employee.bank_name === b.value ? 'selected' : '' %>><%= lang === 'ar' ? b.ar : b.en %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-3 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'رقم الفرع' : 'Branch number' %></label>
+              <input name="bankBranchNumber" class="form-control" value="<%= employee.bank_branch_number || '' %>">
+            </div>
+            <div class="col-md-5 mb-3">
+              <label class="form-label small">IBAN</label>
+              <input name="bankIban" class="form-control" value="<%= employee.bank_iban || '' %>" placeholder="SA00 0000 0000 0000 0000 0000">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mb-4">
         <a href="/settings/users" class="btn btn-outline-secondary"><%= t(lang, 'common.cancel') %></a>
         <button type="submit" class="btn btn-primary"><%= t(lang, 'common.save') %></button>
       </div>
-    </form>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3"><%= lang === 'ar' ? 'رصيد الإجازة' : 'Leave balance' %></h2>
+          <div class="mb-3">
+            <label class="form-label small"><%= lang === 'ar' ? 'الاستحقاق السنوي (تجاوز يدوي)' : 'Annual entitlement (manual override)' %></label>
+            <input type="number" step="0.5" name="annualLeaveOverride" class="form-control" value="<%= employee.annual_leave_override ?? '' %>" placeholder="<%= lang === 'ar' ? 'اتركه فارغاً لاستخدام الحساب التلقائي' : 'Leave blank to use the computed value' %>">
+            <div class="form-text"><%= lang === 'ar' ? '30 يوماً بعد 5 سنوات خدمة، 21 يوماً قبل ذلك — ما لم يُحدَّد هنا.' : '30 days after 5 years of service, 21 before — unless set here.' %></div>
+          </div>
+          <% if (balanceSummary) { %>
+            <hr>
+            <div class="info-row"><span><%= lang === 'ar' ? 'الاستحقاق السنوي الحالي' : 'Current annual entitlement' %></span><strong><%= balanceSummary.fullYearEntitlement %></strong></div>
+            <div class="info-row"><span><%= lang === 'ar' ? 'المتراكم حتى الآن' : 'Accrued to date' %></span><strong><%= balanceSummary.accruedToDate %></strong></div>
+            <div class="info-row"><span><%= lang === 'ar' ? 'المرحّل من العام السابق' : 'Carried over' %></span><strong><%= balanceSummary.carriedOver %></strong></div>
+            <div class="info-row"><span><%= lang === 'ar' ? 'الإجمالي حتى الآن' : 'Total balance now' %></span><strong><%= balanceSummary.totalNow %></strong></div>
+            <div class="info-row"><span><%= lang === 'ar' ? 'الإجمالي حتى نهاية العقد' : 'Total until contract end' %></span><strong><%= balanceSummary.totalUntilContractEnd %></strong></div>
+          <% } else { %>
+            <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا يوجد نوع إجازة سنوية مُعرَّف بعد.' : 'No "Annual leave" type is configured yet.' %></p>
+          <% } %>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+</form>
+
+<script>
+(function () {
+  var inputs = document.querySelectorAll('.salary-part');
+  var total = document.getElementById('salaryTotal');
+  function recalc() {
+    var sum = 0;
+    inputs.forEach(function (i) { sum += Number(i.value) || 0; });
+    total.textContent = 'SAR ' + sum.toFixed(2);
+  }
+  inputs.forEach(function (i) { i.addEventListener('input', recalc); });
+})();
+</script>
 
 <%- include('../partials/app-shell-end') %>
 <%- include('../partials/scripts') %>

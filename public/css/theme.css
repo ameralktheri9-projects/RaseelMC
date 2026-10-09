@@ -157,7 +157,7 @@ h6, .h6 { font-size: 14px; font-weight: 600; }
 .fs-5 { font-size: 19px; }
 .fs-6 { font-size: 16px; }
 .display-4 { font-size: 46px; font-weight: 600; }
-.display-6 { font-size: 30px; font-weight: 600; }
+.display-6 { font-size: 38px; font-weight: 600; line-height: 1.15; }
 .list-unstyled { list-style: none; padding: 0; margin: 0; }
 .ms-auto { margin-left: auto; } [dir="rtl"] .ms-auto { margin-left: 0; margin-right: auto; }
 .text-decoration-none { text-decoration: none; }
@@ -279,6 +279,11 @@ input[type="file"].form-control { padding: 8px 12px; height: auto; }
 .field-icon-wrap input { padding-left: 40px; }
 [dir="rtl"] .field-icon-wrap .field-icon { left: auto; right: 14px; }
 [dir="rtl"] .field-icon-wrap input { padding-left: 12px; padding-right: 40px; }
+.field-icon-wrap .field-toggle { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); font-size: 15px; opacity: .55; background: none; border: 0; padding: 0; cursor: pointer; line-height: 1; }
+.field-icon-wrap .field-toggle:hover { opacity: .85; }
+.field-icon-wrap:has(.field-toggle) input { padding-right: 40px; }
+[dir="rtl"] .field-icon-wrap .field-toggle { right: auto; left: 14px; }
+[dir="rtl"] .field-icon-wrap:has(.field-toggle) input { padding-left: 40px; padding-right: 40px; }
 .search { height: 40px; width: 270px; border: 1px solid var(--line); border-radius: 9px; background: #fbfcfe; padding: 0 12px; color: var(--muted); outline: none; }
 
 .form-grid { display: grid; grid-template-columns: 1.35fr .8fr; gap: 15px; }

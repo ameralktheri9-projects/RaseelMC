@@ -4,7 +4,7 @@
   <div class="auth-brand-panel">
     <img src="/images/icon.png" alt="" class="auth-brand-watermark">
     <div>
-      <img src="/images/logo-white.png" alt="Raseel MC" style="height:40px;display:block;margin-bottom:28px;">
+      <img src="/images/logo-white.png" alt="Raseel MC" style="height:56px;display:block;margin-bottom:28px;">
       <span class="badge-pill">&#128274; <%= t(lang, 'login.internalNetworkOnly') %></span>
       <h1 class="display-6 fw-bold mb-3">
         <% if (lang === 'ar') { %>
@@ -66,7 +66,8 @@
           </div>
           <div class="field-icon-wrap">
             <span class="field-icon">&#128274;</span>
-            <input type="password" name="password" class="form-control form-control-lg" autocomplete="current-password" required>
+            <input type="password" name="password" id="loginPassword" class="form-control form-control-lg" autocomplete="current-password" required>
+            <button type="button" class="field-toggle" id="togglePassword" aria-label="<%= lang === 'ar' ? 'إظهار كلمة المرور' : 'Show password' %>">&#128065;</button>
           </div>
         </div>
         <div class="form-check mb-4">
@@ -81,4 +82,16 @@
   </div>
 </div>
 
+<script>
+(function () {
+  var btn = document.getElementById('togglePassword');
+  var input = document.getElementById('loginPassword');
+  if (!btn || !input) return;
+  btn.addEventListener('click', function () {
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? '\u{1F576}\u{FE0F}' : '\u{1F441}\u{FE0F}';
+  });
+})();
+</script>
 <%- include('partials/scripts') %>

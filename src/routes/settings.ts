@@ -5,6 +5,14 @@ import { db, asRow } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { asyncHandler } from "../utils/asyncHandler";
 import { hashPassword, generateTemporaryPassword } from "../utils/password";
+import { NATIONALITIES, CR_TYPES, SPONSORSHIP_TYPES, SAUDI_BANKS, DEFAULT_CONTRACT_LENGTH_MONTHS } from "../constants/hrLookups";
+import {
+  computeLeaveBalance,
+  getEntitlementRules,
+  getOrCreateLeaveBalanceRow,
+  getPendingLeaveDays,
+} from "../services/leaveCalculationService";
+import dayjs from "dayjs";
 import type {
   Workflow,
   WorkflowStep,
@@ -580,6 +588,57 @@ settingsRouter.get(
     const employees = asRow<Employee[]>(
       await db.prepare("SELECT * FROM employees WHERE id != ? ORDER BY name_en").all(employeeId)
     );
+
+    // Leave balance summary — same figures as Reports > Employee leave balances, computed for
+    // just this one employee so HR can see the effect of an entitlement override immediately.
+    const annualType = (await db.prepare("SELECT id FROM leave_types WHERE name_en = 'Annual leave'").get()) as
+      | { id: number }
+      | undefined;
+    let balanceSummary: {
+      fullYearEntitlement: number;
+      accruedToDate: number;
+      carriedOver: number;
+      totalNow: number;
+      totalUntilContractEnd: number;
+    } | null = null;
+    if (annualType) {
+      const rules = await getEntitlementRules();
+      const asOf = new Date().toISOString().slice(0, 10);
+      const pending = await getPendingLeaveDays(employee.id, annualType.id);
+      const prelim = computeLeaveBalance({
+        employee,
+        asOf,
+        entitlementRules: rules,
+        carriedOver: 0,
+        taken: 0,
+        pending,
+        manualAdjustment: 0,
+      });
+      const balanceRow = await getOrCreateLeaveBalanceRow(
+        employee.id,
+        annualType.id,
+        prelim.leaveYearStart,
+        prelim.leaveYearEnd,
+        prelim.fullYearEntitlement
+      );
+      const balance = computeLeaveBalance({
+        employee,
+        asOf,
+        entitlementRules: rules,
+        carriedOver: balanceRow.carried_over,
+        taken: balanceRow.taken,
+        pending,
+        manualAdjustment: balanceRow.manual_adjustment,
+      });
+      balanceSummary = {
+        fullYearEntitlement: balance.fullYearEntitlement,
+        accruedToDate: balance.accruedToDate,
+        carriedOver: balance.carriedOver,
+        totalNow: balance.carriedOver + balance.accruedToDate,
+        totalUntilContractEnd: balance.carriedOver + balance.fullYearEntitlement,
+      };
+    }
+
     res.render("settings/edit-employee", {
       title: lang === "ar" ? "تعديل موظف" : "Edit employee",
       lang,
@@ -587,6 +646,11 @@ settingsRouter.get(
       departments,
       positions,
       employees,
+      balanceSummary,
+      nationalities: NATIONALITIES,
+      crTypes: CR_TYPES,
+      sponsorshipTypes: SPONSORSHIP_TYPES,
+      banks: SAUDI_BANKS,
     });
   })
 );
@@ -598,9 +662,28 @@ settingsRouter.post(
     const body = req.body as Record<string, string>;
     const old = await db.prepare("SELECT * FROM employees WHERE id = ?").get(employeeId);
 
+    const salaryBasic = body.salaryBasic ? Number(body.salaryBasic) : null;
+    const salaryHousing = body.salaryHousing ? Number(body.salaryHousing) : null;
+    const salaryTransport = body.salaryTransport ? Number(body.salaryTransport) : null;
+    const salaryOther = body.salaryOther ? Number(body.salaryOther) : null;
+    const grossSalary = [salaryBasic, salaryHousing, salaryTransport, salaryOther].some((v) => v != null)
+      ? (salaryBasic ?? 0) + (salaryHousing ?? 0) + (salaryTransport ?? 0) + (salaryOther ?? 0)
+      : body.grossSalary
+        ? Number(body.grossSalary)
+        : null;
+
+    const contractStartDate = body.contractStartDate || null;
+    const contractEndDate = contractStartDate
+      ? dayjs(contractStartDate).add(DEFAULT_CONTRACT_LENGTH_MONTHS, "month").format("YYYY-MM-DD")
+      : null;
+
     await db.prepare(
       `UPDATE employees SET name_en=?, name_ar=?, department_id=?, job_title=?, job_grade=?,
-         direct_manager_id=?, joining_date=?, gross_salary=?, status=?, updated_at=${NOW_SQL}
+         direct_manager_id=?, joining_date=?, gross_salary=?, status=?,
+         date_of_birth=?, contract_start_date=?, contract_end_date=?,
+         salary_basic=?, salary_housing=?, salary_transport=?, salary_other=?,
+         annual_leave_override=?, nationality=?, cr_type=?, sponsorship_type=?,
+         bank_name=?, bank_branch_number=?, bank_iban=?, updated_at=${NOW_SQL}
        WHERE id = ?`
     ).run(
       body.nameEn,
@@ -610,8 +693,22 @@ settingsRouter.post(
       body.jobGrade || null,
       body.directManagerId ? Number(body.directManagerId) : null,
       body.joiningDate,
-      body.grossSalary ? Number(body.grossSalary) : null,
+      grossSalary,
       body.status || "active",
+      body.dateOfBirth || null,
+      contractStartDate,
+      contractEndDate,
+      salaryBasic,
+      salaryHousing,
+      salaryTransport,
+      salaryOther,
+      body.annualLeaveOverride ? Number(body.annualLeaveOverride) : null,
+      body.nationality || null,
+      body.crType || null,
+      body.sponsorshipType || null,
+      body.bankName || null,
+      body.bankBranchNumber || null,
+      body.bankIban || null,
       employeeId
     );
 
