@@ -32,8 +32,8 @@
   <form method="POST" action="/settings/users/bulk-import" enctype="multipart/form-data" class="card card-body">
     <p class="small text-muted">
       <%= lang === 'ar'
-        ? 'ارفع ملف Excel يحتوي على أعمدة: employee_code, name_en, name_ar, department, job_title, job_grade, direct_manager_code, joining_date, gross_salary, create_account.'
-        : 'Upload an Excel file with columns: employee_code, name_en, name_ar, department, job_title, job_grade, direct_manager_code, joining_date, gross_salary, create_account.' %>
+        ? 'ارفع ملف Excel بالأعمدة الموضحة في النموذج (الاسم، القسم، تاريخ التعيين، تاريخ الميلاد، الجنسية، السجل التجاري، الكفالة، تاريخ ومدة العقد، تفاصيل الراتب، الحساب البنكي، وإنشاء حساب دخول).'
+        : 'Upload an Excel file with the columns shown in the template (name, department, joining date, date of birth, nationality, commercial registration, sponsorship, contract start/period, salary breakdown, bank details, and create-account).' %>
       <a href="/settings/users/bulk-import-template.xlsx"><%= lang === 'ar' ? 'تنزيل نموذج' : 'Download template' %></a>
     </p>
     <div class="row g-2">

@@ -5,7 +5,7 @@ import { db, asRow } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { asyncHandler } from "../utils/asyncHandler";
 import { hashPassword, generateTemporaryPassword } from "../utils/password";
-import { NATIONALITIES, CR_TYPES, SPONSORSHIP_TYPES, SAUDI_BANKS, DEFAULT_CONTRACT_LENGTH_MONTHS } from "../constants/hrLookups";
+import { NATIONALITIES, CR_TYPES, SPONSORSHIP_TYPES, SAUDI_BANKS } from "../constants/hrLookups";
 import {
   computeLeaveBalance,
   getEntitlementRules,
@@ -673,14 +673,16 @@ settingsRouter.post(
         : null;
 
     const contractStartDate = body.contractStartDate || null;
-    const contractEndDate = contractStartDate
-      ? dayjs(contractStartDate).add(DEFAULT_CONTRACT_LENGTH_MONTHS, "month").format("YYYY-MM-DD")
-      : null;
+    const contractPeriodMonths = body.contractPeriodMonths ? Number(body.contractPeriodMonths) : null;
+    const contractEndDate =
+      contractStartDate && contractPeriodMonths
+        ? dayjs(contractStartDate).add(contractPeriodMonths, "month").format("YYYY-MM-DD")
+        : null;
 
     await db.prepare(
       `UPDATE employees SET name_en=?, name_ar=?, department_id=?, job_title=?, job_grade=?,
          direct_manager_id=?, joining_date=?, gross_salary=?, status=?,
-         date_of_birth=?, contract_start_date=?, contract_end_date=?,
+         date_of_birth=?, contract_start_date=?, contract_period_months=?, contract_end_date=?,
          salary_basic=?, salary_housing=?, salary_transport=?, salary_other=?,
          annual_leave_override=?, nationality=?, cr_type=?, sponsorship_type=?,
          bank_name=?, bank_branch_number=?, bank_iban=?, updated_at=${NOW_SQL}
@@ -697,6 +699,7 @@ settingsRouter.post(
       body.status || "active",
       body.dateOfBirth || null,
       contractStartDate,
+      contractPeriodMonths,
       contractEndDate,
       salaryBasic,
       salaryHousing,
@@ -751,32 +754,60 @@ settingsRouter.post(
     let created = 0;
     const errors: string[] = [];
 
-    // Expected header row: employee_code, name_en, name_ar, department, job_title,
-    // job_grade, direct_manager_code, joining_date, gross_salary, create_account (yes/no)
+    const cellStr = (row: ExcelJS.Row, col: number) => String(row.getCell(col).value ?? "").trim();
+    const cellDate = (row: ExcelJS.Row, col: number) => {
+      const v = row.getCell(col).value;
+      return v instanceof Date ? v.toISOString().slice(0, 10) : String(v ?? "").trim() || null;
+    };
+    const cellNum = (row: ExcelJS.Row, col: number) => {
+      const v = row.getCell(col).value;
+      return v === null || v === undefined || v === "" ? null : Number(v) || null;
+    };
+
+    // Column order, matching bulk-import-template.xlsx below:
+    // 1 employee_code, 2 name_en, 3 name_ar, 4 department, 5 job_title, 6 job_grade,
+    // 7 direct_manager_code, 8 joining_date, 9 date_of_birth, 10 nationality, 11 cr_type
+    // (main/branch/optics), 12 sponsorship_type (company/other), 13 contract_start_date,
+    // 14 contract_period_months, 15 salary_basic, 16 salary_housing, 17 salary_transport,
+    // 18 salary_other, 19 bank_name, 20 bank_branch_number, 21 bank_iban, 22 create_account
     for (let i = 2; i <= sheet.rowCount; i++) {
       const row = sheet.getRow(i);
-      const employeeCode = String(row.getCell(1).value ?? "").trim();
+      const employeeCode = cellStr(row, 1);
       if (!employeeCode) continue;
 
       try {
-        const nameEn = String(row.getCell(2).value ?? "").trim();
-        const nameAr = String(row.getCell(3).value ?? "").trim();
-        const deptName = String(row.getCell(4).value ?? "").trim();
-        const jobTitle = String(row.getCell(5).value ?? "").trim();
-        const jobGrade = String(row.getCell(6).value ?? "").trim();
-        const managerCode = String(row.getCell(7).value ?? "").trim();
-        const joiningDateRaw = row.getCell(8).value;
-        const joiningDate =
-          joiningDateRaw instanceof Date
-            ? joiningDateRaw.toISOString().slice(0, 10)
-            : String(joiningDateRaw ?? "").trim();
-        const grossSalary = Number(row.getCell(9).value) || null;
-        const createAccount = String(row.getCell(10).value ?? "")
-          .trim()
-          .toLowerCase();
+        const nameEn = cellStr(row, 2);
+        const nameAr = cellStr(row, 3);
+        const deptName = cellStr(row, 4);
+        const jobTitle = cellStr(row, 5);
+        const jobGrade = cellStr(row, 6);
+        const managerCode = cellStr(row, 7);
+        const joiningDate = cellDate(row, 8);
+        const dateOfBirth = cellDate(row, 9);
+        const nationality = cellStr(row, 10) || null;
+        const crType = cellStr(row, 11).toLowerCase() || null;
+        const sponsorshipType = cellStr(row, 12).toLowerCase() || null;
+        const contractStartDate = cellDate(row, 13);
+        const contractPeriodMonths = cellNum(row, 14);
+        const salaryBasic = cellNum(row, 15);
+        const salaryHousing = cellNum(row, 16);
+        const salaryTransport = cellNum(row, 17);
+        const salaryOther = cellNum(row, 18);
+        const bankName = cellStr(row, 19) || null;
+        const bankBranchNumber = cellStr(row, 20) || null;
+        const bankIban = cellStr(row, 21) || null;
+        const createAccount = cellStr(row, 22).toLowerCase();
 
         if (!nameEn || !joiningDate) {
           errors.push(`Row ${i} (${employeeCode}): missing required name or joining date.`);
+          continue;
+        }
+        if (crType && !["main", "branch", "optics"].includes(crType)) {
+          errors.push(`Row ${i} (${employeeCode}): cr_type must be main/branch/optics, got "${crType}".`);
+          continue;
+        }
+        if (sponsorshipType && !["company", "other"].includes(sponsorshipType)) {
+          errors.push(`Row ${i} (${employeeCode}): sponsorship_type must be company/other, got "${sponsorshipType}".`);
           continue;
         }
 
@@ -795,11 +826,23 @@ settingsRouter.post(
               | undefined)
           : null;
 
+        const grossSalary = [salaryBasic, salaryHousing, salaryTransport, salaryOther].some((v) => v != null)
+          ? (salaryBasic ?? 0) + (salaryHousing ?? 0) + (salaryTransport ?? 0) + (salaryOther ?? 0)
+          : null;
+        const contractEndDate =
+          contractStartDate && contractPeriodMonths
+            ? dayjs(contractStartDate).add(contractPeriodMonths, "month").format("YYYY-MM-DD")
+            : null;
+
         const inserted = (await db
           .prepare(
             `INSERT INTO employees
-              (employee_code, name_en, name_ar, department_id, job_title, job_grade, direct_manager_id, joining_date, gross_salary, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active') RETURNING id`
+              (employee_code, name_en, name_ar, department_id, job_title, job_grade, direct_manager_id,
+               joining_date, gross_salary, status, date_of_birth, nationality, cr_type, sponsorship_type,
+               contract_start_date, contract_period_months, contract_end_date,
+               salary_basic, salary_housing, salary_transport, salary_other,
+               bank_name, bank_branch_number, bank_iban)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
           )
           .get(
             employeeCode,
@@ -810,7 +853,21 @@ settingsRouter.post(
             jobGrade || null,
             manager?.id ?? null,
             joiningDate,
-            grossSalary
+            grossSalary,
+            dateOfBirth,
+            nationality,
+            crType,
+            sponsorshipType,
+            contractStartDate,
+            contractPeriodMonths,
+            contractEndDate,
+            salaryBasic,
+            salaryHousing,
+            salaryTransport,
+            salaryOther,
+            bankName,
+            bankBranchNumber,
+            bankIban
           )) as { id: number };
         const newEmployeeId = inserted.id;
 
@@ -849,7 +906,19 @@ settingsRouter.get(
       { header: "job_grade", key: "jobGrade", width: 14 },
       { header: "direct_manager_code", key: "manager", width: 18 },
       { header: "joining_date", key: "joining", width: 14 },
-      { header: "gross_salary", key: "salary", width: 14 },
+      { header: "date_of_birth", key: "dob", width: 14 },
+      { header: "nationality", key: "nationality", width: 16 },
+      { header: "cr_type (main/branch/optics)", key: "crType", width: 22 },
+      { header: "sponsorship_type (company/other)", key: "sponsorship", width: 24 },
+      { header: "contract_start_date", key: "contractStart", width: 16 },
+      { header: "contract_period_months", key: "contractMonths", width: 18 },
+      { header: "salary_basic", key: "salaryBasic", width: 14 },
+      { header: "salary_housing", key: "salaryHousing", width: 14 },
+      { header: "salary_transport", key: "salaryTransport", width: 14 },
+      { header: "salary_other", key: "salaryOther", width: 14 },
+      { header: "bank_name", key: "bankName", width: 20 },
+      { header: "bank_branch_number", key: "bankBranch", width: 16 },
+      { header: "bank_iban", key: "bankIban", width: 24 },
       { header: "create_account", key: "createAccount", width: 14 },
     ];
     sheet.addRow({
@@ -861,7 +930,19 @@ settingsRouter.get(
       jobGrade: "Staff",
       manager: "RMC-1000",
       joining: "2026-01-01",
-      salary: 7000,
+      dob: "1990-06-15",
+      nationality: "Saudi",
+      crType: "main",
+      sponsorship: "company",
+      contractStart: "2026-01-01",
+      contractMonths: 24,
+      salaryBasic: 5000,
+      salaryHousing: 1500,
+      salaryTransport: 500,
+      salaryOther: 0,
+      bankName: "Al Rajhi Bank",
+      bankBranch: "1234",
+      bankIban: "SA0310000012345678901234",
       createAccount: "yes",
     });
     res.setHeader(
@@ -950,5 +1031,117 @@ settingsRouter.get(
       )
       .all();
     res.render("settings/audit-log", { title: lang === "ar" ? "سجل التدقيق" : "Audit log", lang, logs });
+  })
+);
+
+// --- Employee inquiry (استعلامات): look up one employee's full picture by code ---------
+
+settingsRouter.get(
+  "/employee-inquiry",
+  requireAuth,
+  requireRole("hr_officer", "system_admin"),
+  asyncHandler(async (req, res) => {
+    const lang = req.session.user!.language;
+    const code = String(req.query.code || "").trim();
+
+    let employee: Employee | null = null;
+    let department: { name_en: string; name_ar: string } | null = null;
+    let balanceSummary: {
+      fullYearEntitlement: number;
+      accruedToDate: number;
+      carriedOver: number;
+      taken: number;
+      pending: number;
+      remaining: number;
+      totalNow: number;
+      totalUntilContractEnd: number;
+    } | null = null;
+    let leaveHistory: unknown[] = [];
+    let loanHistory: unknown[] = [];
+    let notFound = false;
+
+    if (code) {
+      const found = asRow<Employee | undefined>(
+        await db.prepare("SELECT * FROM employees WHERE employee_code = ?").get(code)
+      );
+      if (!found) {
+        notFound = true;
+      } else {
+        employee = found;
+        department = employee.department_id
+          ? ((await db.prepare("SELECT name_en, name_ar FROM departments WHERE id = ?").get(employee.department_id)) as
+              | { name_en: string; name_ar: string }
+              | null)
+          : null;
+
+        const annualType = (await db.prepare("SELECT id FROM leave_types WHERE name_en = 'Annual leave'").get()) as
+          | { id: number }
+          | undefined;
+        if (annualType) {
+          const rules = await getEntitlementRules();
+          const asOf = new Date().toISOString().slice(0, 10);
+          const pending = await getPendingLeaveDays(employee.id, annualType.id);
+          const prelim = computeLeaveBalance({
+            employee,
+            asOf,
+            entitlementRules: rules,
+            carriedOver: 0,
+            taken: 0,
+            pending,
+            manualAdjustment: 0,
+          });
+          const balanceRow = await getOrCreateLeaveBalanceRow(
+            employee.id,
+            annualType.id,
+            prelim.leaveYearStart,
+            prelim.leaveYearEnd,
+            prelim.fullYearEntitlement
+          );
+          const balance = computeLeaveBalance({
+            employee,
+            asOf,
+            entitlementRules: rules,
+            carriedOver: balanceRow.carried_over,
+            taken: balanceRow.taken,
+            pending,
+            manualAdjustment: balanceRow.manual_adjustment,
+          });
+          balanceSummary = {
+            fullYearEntitlement: balance.fullYearEntitlement,
+            accruedToDate: balance.accruedToDate,
+            carriedOver: balance.carriedOver,
+            taken: balance.taken,
+            pending: balance.pending,
+            remaining: balance.remaining,
+            totalNow: balance.carriedOver + balance.accruedToDate,
+            totalUntilContractEnd: balance.carriedOver + balance.fullYearEntitlement,
+          };
+        }
+
+        leaveHistory = await db
+          .prepare(
+            `SELECT lr.*, lt.name_en as type_name_en, lt.name_ar as type_name_ar
+             FROM leave_requests lr JOIN leave_types lt ON lt.id = lr.leave_type_id
+             WHERE lr.employee_id = ? ORDER BY lr.created_at DESC`
+          )
+          .all(employee.id);
+
+        loanHistory = await db
+          .prepare("SELECT * FROM loan_requests WHERE employee_id = ? ORDER BY created_at DESC")
+          .all(employee.id);
+      }
+    }
+
+    res.render("settings/employee-inquiry", {
+      title: lang === "ar" ? "استعلامات" : "Employee inquiry",
+      lang,
+      code,
+      employee,
+      department,
+      balanceSummary,
+      leaveHistory,
+      loanHistory,
+      notFound,
+    });
   })
 );

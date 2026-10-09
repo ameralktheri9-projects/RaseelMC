@@ -89,16 +89,20 @@
             </div>
           </div>
           <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
               <label class="form-label small"><%= lang === 'ar' ? 'تاريخ بداية العقد' : 'Contract start date' %></label>
-              <input type="date" name="contractStartDate" class="form-control" value="<%= employee.contract_start_date || '' %>">
+              <input type="date" name="contractStartDate" id="contractStartDate" class="form-control" value="<%= employee.contract_start_date || '' %>">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
+              <label class="form-label small"><%= lang === 'ar' ? 'مدة العقد (أشهر)' : 'Contract period (months)' %></label>
+              <input type="number" name="contractPeriodMonths" id="contractPeriodMonths" class="form-control" min="1" step="1" value="<%= employee.contract_period_months ?? '' %>" placeholder="24">
+            </div>
+            <div class="col-md-3 mb-3">
               <label class="form-label small"><%= lang === 'ar' ? 'تاريخ نهاية العقد' : 'Contract end date' %></label>
-              <input type="text" class="form-control" value="<%= employee.contract_end_date || (lang === 'ar' ? 'يُحتسب تلقائياً' : 'Calculated automatically') %>" disabled>
-              <div class="form-text"><%= lang === 'ar' ? 'سنتان من تاريخ بداية العقد' : '2 years from the contract start date' %></div>
+              <input type="text" id="contractEndDate" class="form-control" value="<%= employee.contract_end_date || (lang === 'ar' ? 'يُحتسب تلقائياً' : 'Calculated automatically') %>" disabled>
+              <div class="form-text"><%= lang === 'ar' ? 'بداية العقد + المدة بالأشهر' : 'Contract start + the period in months' %></div>
             </div>
-            <div class="col-md-2 mb-3">
+            <div class="col-md-3 mb-3">
               <label class="form-label small"><%= lang === 'ar' ? 'السجل التجاري' : 'Commercial reg.' %></label>
               <select name="crType" class="form-select">
                 <option value="">--</option>
@@ -107,7 +111,9 @@
                 <% }) %>
               </select>
             </div>
-            <div class="col-md-2 mb-3">
+          </div>
+          <div class="row">
+            <div class="col-md-3 mb-3">
               <label class="form-label small"><%= lang === 'ar' ? 'الكفالة' : 'Sponsorship' %></label>
               <select name="sponsorshipType" class="form-select">
                 <option value="">--</option>
@@ -214,6 +220,21 @@
     total.textContent = 'SAR ' + sum.toFixed(2);
   }
   inputs.forEach(function (i) { i.addEventListener('input', recalc); });
+})();
+(function () {
+  var startInput = document.getElementById('contractStartDate');
+  var periodInput = document.getElementById('contractPeriodMonths');
+  var endInput = document.getElementById('contractEndDate');
+  function recalc() {
+    var start = startInput.value;
+    var months = Number(periodInput.value);
+    if (!start || !months) return;
+    var d = new Date(start + 'T00:00:00');
+    d.setMonth(d.getMonth() + months);
+    endInput.value = d.toISOString().slice(0, 10);
+  }
+  startInput.addEventListener('input', recalc);
+  periodInput.addEventListener('input', recalc);
 })();
 </script>
 

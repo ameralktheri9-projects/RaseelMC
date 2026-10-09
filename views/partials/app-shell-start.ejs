@@ -19,6 +19,7 @@
   // to everyone else just adds clutter for accounts (e.g. plain employees) that will never use it.
   const managementItems = [];
   if (canSeeReports) managementItems.push({ href: '/reports', key: 'nav.reports', icon: '&#128202;' });
+  if (isAdminOrHr) managementItems.push({ href: '/employee-inquiry', key: 'nav.employeeInquiry', icon: '&#128269;' });
   if (isAdminOrHr) managementItems.push({ href: '/settings', key: 'nav.settings', icon: '&#9881;' });
   if (isAdmin) managementItems.push({ href: '/audit-log', key: 'nav.auditLog', icon: '&#128220;' });
 

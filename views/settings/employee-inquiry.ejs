@@ -1,0 +1,133 @@
+<%- include('../partials/head', { title, lang }) %>
+<%- include('../partials/app-shell-start', { lang, title, currentUser, currentPath }) %>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3"><%= lang === 'ar' ? 'استعلام عن موظف' : 'Employee inquiry' %></h2>
+    <form method="GET" action="/employee-inquiry" class="d-flex gap-2">
+      <input type="text" name="code" class="form-control" value="<%= code %>" placeholder="<%= lang === 'ar' ? 'الرقم الوظيفي، مثال: RMC-1042' : 'Employee code, e.g. RMC-1042' %>" autofocus>
+      <button type="submit" class="btn btn-primary"><%= lang === 'ar' ? 'بحث' : 'Search' %></button>
+    </form>
+  </div>
+</div>
+
+<% if (notFound) { %>
+  <div class="alert alert-warning"><%= lang === 'ar' ? 'لا يوجد موظف بهذا الرقم الوظيفي.' : 'No employee found with that code.' %></div>
+<% } %>
+
+<% if (employee) { %>
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h3 class="h5 mb-1"><%= lang === 'ar' ? employee.name_ar : employee.name_en %></h3>
+          <p class="text-muted small mb-0">
+            <%= employee.job_title || '-' %>
+            <% if (department) { %> &middot; <%= lang === 'ar' ? department.name_ar : department.name_en %><% } %>
+            &middot; <%= lang === 'ar' ? 'رقم' : 'Code' %>: <%= employee.employee_code %>
+          </p>
+        </div>
+        <div class="avatar" style="width:48px;height:48px;font-size:16px;">
+          <%= (employee.name_en || '?').split(' ').map(function(w){return w[0];}).slice(0,2).join('').toUpperCase() %>
+        </div>
+      </div>
+
+      <% if (balanceSummary) { %>
+        <div class="fact-grid mt-3 mb-0">
+          <div class="fact">
+            <small><%= lang === 'ar' ? 'المتبقي' : 'Remaining' %></small>
+            <strong style="color:var(--green);"><%= balanceSummary.remaining %></strong>
+          </div>
+          <div class="fact">
+            <small><%= lang === 'ar' ? 'المستهلك' : 'Taken' %></small>
+            <strong style="color:var(--red);"><%= balanceSummary.taken %></strong>
+          </div>
+          <div class="fact">
+            <small><%= lang === 'ar' ? 'المتراكم' : 'Accrued' %></small>
+            <strong style="color:var(--amber);"><%= balanceSummary.accruedToDate %></strong>
+          </div>
+          <div class="fact" style="background:var(--amberbg);">
+            <small><%= lang === 'ar' ? 'الإجمالي' : 'Total' %></small>
+            <strong style="color:var(--blue);"><%= balanceSummary.totalNow %></strong>
+            <small class="text-muted"><%= balanceSummary.carriedOver %>+<%= balanceSummary.accruedToDate %></small>
+          </div>
+          <div class="fact">
+            <small><%= lang === 'ar' ? 'الرصيد المرحل' : 'Carried over' %></small>
+            <strong style="color:var(--green);"><%= balanceSummary.carriedOver %></strong>
+          </div>
+          <div class="fact">
+            <small><%= lang === 'ar' ? 'الرصيد السنوي' : 'Annual entitlement' %></small>
+            <strong style="color:var(--blue);"><%= balanceSummary.fullYearEntitlement %></strong>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <h3 class="h6 mb-3"><%= lang === 'ar' ? 'سجل الإجازات' : 'Leave history' %> (<%= leaveHistory.length %>)</h3>
+      <% if (!leaveHistory.length) { %>
+        <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد طلبات إجازة.' : 'No leave requests.' %></p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table class="table table-sm align-middle">
+            <thead class="text-muted small">
+              <tr>
+                <th><%= lang === 'ar' ? 'النوع' : 'Type' %></th>
+                <th><%= lang === 'ar' ? 'التواريخ' : 'Dates' %></th>
+                <th><%= lang === 'ar' ? 'الأيام' : 'Days' %></th>
+                <th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% leaveHistory.forEach(function(r) { %>
+                <tr>
+                  <td><%= lang === 'ar' ? r.type_name_ar : r.type_name_en %></td>
+                  <td><%= r.start_date %> &ndash; <%= r.end_date %></td>
+                  <td><%= r.working_days %></td>
+                  <td><span class="badge badge-status-<%= r.status %>"><%= r.status %></span></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <h3 class="h6 mb-3"><%= lang === 'ar' ? 'سجل السلف' : 'Loan history' %> (<%= loanHistory.length %>)</h3>
+      <% if (!loanHistory.length) { %>
+        <p class="text-muted small mb-0"><%= lang === 'ar' ? 'لا توجد طلبات سلفة.' : 'No loan requests.' %></p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table class="table table-sm align-middle">
+            <thead class="text-muted small">
+              <tr>
+                <th><%= lang === 'ar' ? 'المبلغ' : 'Amount' %></th>
+                <th><%= lang === 'ar' ? 'القسط الشهري' : 'Monthly' %></th>
+                <th><%= lang === 'ar' ? 'الأشهر' : 'Months' %></th>
+                <th><%= lang === 'ar' ? 'الحالة' : 'Status' %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% loanHistory.forEach(function(l) { %>
+                <tr>
+                  <td>SAR <%= l.amount %></td>
+                  <td>SAR <%= l.monthly_amount %></td>
+                  <td><%= l.months %></td>
+                  <td><span class="badge badge-status-<%= l.status %>"><%= l.status %></span></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../partials/app-shell-end') %>
+<%- include('../partials/scripts') %>

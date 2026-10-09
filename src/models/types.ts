@@ -50,6 +50,7 @@ export interface Employee {
   phone: string | null;
   date_of_birth: string | null;
   contract_start_date: string | null;
+  contract_period_months: number | null;
   contract_end_date: string | null;
   salary_basic: number | null;
   salary_housing: number | null;
