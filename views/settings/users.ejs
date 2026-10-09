@@ -19,11 +19,33 @@
     <% } %>
   </div>
 <% } %>
+<% if (typeof leaveBalanceImportResult !== 'undefined' && leaveBalanceImportResult) { %>
+  <div class="alert <%= leaveBalanceImportResult.errors.length ? 'alert-warning' : 'alert-success' %>">
+    <%= lang === 'ar' ? 'تم تحديث رصيد' : 'Updated the leave balance for' %> <strong><%= leaveBalanceImportResult.updated %></strong> <%= lang === 'ar' ? 'موظف.' : 'employee(s).' %>
+    <% if (leaveBalanceImportResult.errors.length) { %>
+      <ul class="mb-0 small mt-2">
+        <% leaveBalanceImportResult.errors.forEach(function(e) { %><li><%= e %></li><% }) %>
+      </ul>
+    <% } %>
+  </div>
+<% } %>
+<% if (typeof loanImportResult !== 'undefined' && loanImportResult) { %>
+  <div class="alert <%= loanImportResult.errors.length ? 'alert-warning' : 'alert-success' %>">
+    <%= lang === 'ar' ? 'تم استيراد' : 'Imported' %> <strong><%= loanImportResult.created %></strong> <%= lang === 'ar' ? 'سلفة.' : 'loan(s).' %>
+    <% if (loanImportResult.errors.length) { %>
+      <ul class="mb-0 small mt-2">
+        <% loanImportResult.errors.forEach(function(e) { %><li><%= e %></li><% }) %>
+      </ul>
+    <% } %>
+  </div>
+<% } %>
 
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <h3 class="h5 mb-0"><%= lang === 'ar' ? 'الموظفون والمستخدمون' : 'Employees & users' %></h3>
-  <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#bulk-import">📄 <%= lang === 'ar' ? 'استيراد Excel' : 'Bulk import (Excel)' %></button>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#bulk-import">📄 <%= lang === 'ar' ? 'استيراد الموظفين' : 'Import employees' %></button>
+    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#bulk-import-leave">📄 <%= lang === 'ar' ? 'استيراد أرصدة الإجازات' : 'Import leave balances' %></button>
+    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#bulk-import-loans">📄 <%= lang === 'ar' ? 'استيراد السلف' : 'Import loans' %></button>
     <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#new-emp">+ <%= lang === 'ar' ? 'موظف جديد' : 'New employee' %></button>
   </div>
 </div>
@@ -35,6 +57,36 @@
         ? 'ارفع ملف Excel بالأعمدة الموضحة في النموذج (الاسم، القسم، تاريخ التعيين، تاريخ الميلاد، الجنسية، السجل التجاري، الكفالة، تاريخ ومدة العقد، تفاصيل الراتب، الحساب البنكي، وإنشاء حساب دخول).'
         : 'Upload an Excel file with the columns shown in the template (name, department, joining date, date of birth, nationality, commercial registration, sponsorship, contract start/period, salary breakdown, bank details, and create-account).' %>
       <a href="/settings/users/bulk-import-template.xlsx"><%= lang === 'ar' ? 'تنزيل نموذج' : 'Download template' %></a>
+    </p>
+    <div class="row g-2">
+      <div class="col-md-9"><input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required></div>
+      <div class="col-md-3"><button type="submit" class="btn btn-sm btn-primary w-100"><%= lang === 'ar' ? 'استيراد' : 'Import' %></button></div>
+    </div>
+  </form>
+</div>
+
+<div class="collapse mb-3" id="bulk-import-leave">
+  <form method="POST" action="/settings/leave-balances/bulk-import" enctype="multipart/form-data" class="card card-body">
+    <p class="small text-muted">
+      <%= lang === 'ar'
+        ? 'لإدخال أرصدة الإجازات الحالية (المرحّل والمستهلك) للموظفين الموجودين مسبقاً. الموظف يجب أن يكون مُنشأً بالفعل (برقمه الوظيفي). يُستخدم هذا لمرة واحدة عند بدء تشغيل النظام.'
+        : 'For entering existing employees\' current leave balances (carried-over and taken so far). The employee must already exist (matched by employee code). Meant for one-time use when first setting up the system.' %>
+      <a href="/settings/leave-balances/bulk-import-template.xlsx"><%= lang === 'ar' ? 'تنزيل نموذج' : 'Download template' %></a>
+    </p>
+    <div class="row g-2">
+      <div class="col-md-9"><input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required></div>
+      <div class="col-md-3"><button type="submit" class="btn btn-sm btn-primary w-100"><%= lang === 'ar' ? 'استيراد' : 'Import' %></button></div>
+    </div>
+  </form>
+</div>
+
+<div class="collapse mb-3" id="bulk-import-loans">
+  <form method="POST" action="/settings/loans/bulk-import" enctype="multipart/form-data" class="card card-body">
+    <p class="small text-muted">
+      <%= lang === 'ar'
+        ? 'لإدخال السلف الحالية (النشطة أو المنتهية) للموظفين. يتم إنشاؤها مباشرة بدون المرور بمسار الموافقة (باعتبارها سلفاً تمت الموافقة عليها مسبقاً)، مع جدول الأقساط كاملاً وتحديد عدد الأقساط المخصومة فعلياً.'
+        : 'For entering existing (active or completed) loans. These are created directly without going through the approval workflow (treated as already-approved), with the full instalment schedule and however many instalments are already marked deducted.' %>
+      <a href="/settings/loans/bulk-import-template.xlsx"><%= lang === 'ar' ? 'تنزيل نموذج' : 'Download template' %></a>
     </p>
     <div class="row g-2">
       <div class="col-md-9"><input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required></div>

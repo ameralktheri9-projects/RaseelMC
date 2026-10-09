@@ -11,7 +11,11 @@ import {
   getEntitlementRules,
   getOrCreateLeaveBalanceRow,
   getPendingLeaveDays,
+  leaveYearWindow,
+  resolveAnnualEntitlement,
+  yearsOfService,
 } from "../services/leaveCalculationService";
+import { planFromMonths } from "../services/loanCalculationService";
 import dayjs from "dayjs";
 import type {
   Workflow,
@@ -566,6 +570,12 @@ settingsRouter.get(
       importResult: req.query.imported
         ? { created: Number(req.query.imported), errors: req.query.errors ? JSON.parse(String(req.query.errors)) : [] }
         : null,
+      leaveBalanceImportResult: req.query.lbImported
+        ? { updated: Number(req.query.lbImported), errors: req.query.lbErrors ? JSON.parse(String(req.query.lbErrors)) : [] }
+        : null,
+      loanImportResult: req.query.loanImported
+        ? { created: Number(req.query.loanImported), errors: req.query.loanErrors ? JSON.parse(String(req.query.loanErrors)) : [] }
+        : null,
       resetPassword: req.query.resetPassword ? String(req.query.resetPassword) : null,
     });
   })
@@ -950,6 +960,229 @@ settingsRouter.get(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
     res.setHeader("Content-Disposition", 'attachment; filename="employee-import-template.xlsx"');
+    await wb.xlsx.write(res);
+    res.end();
+  })
+);
+
+// --- Historical data import: leave balances -----------------------------------
+
+settingsRouter.post(
+  "/settings/leave-balances/bulk-import",
+  upload.single("file"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      res.redirect("/settings/users");
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer as unknown as ArrayBuffer);
+    const sheet = workbook.worksheets[0];
+
+    const rules = await getEntitlementRules();
+    const asOf = new Date().toISOString().slice(0, 10);
+    let updated = 0;
+    const errors: string[] = [];
+
+    // Columns: employee_code, leave_type (optional, defaults to "Annual leave"),
+    // carried_over, taken, manual_adjustment (optional, default 0)
+    for (let i = 2; i <= sheet.rowCount; i++) {
+      const row = sheet.getRow(i);
+      const employeeCode = String(row.getCell(1).value ?? "").trim();
+      if (!employeeCode) continue;
+
+      try {
+        const leaveTypeName = String(row.getCell(2).value ?? "").trim() || "Annual leave";
+        const carriedOver = Number(row.getCell(3).value) || 0;
+        const taken = Number(row.getCell(4).value) || 0;
+        const manualAdjustment = Number(row.getCell(5).value) || 0;
+
+        const employee = asRow<Employee | undefined>(
+          await db.prepare("SELECT * FROM employees WHERE employee_code = ?").get(employeeCode)
+        );
+        if (!employee) {
+          errors.push(`Row ${i} (${employeeCode}): no employee with this code.`);
+          continue;
+        }
+        const leaveType = (await db
+          .prepare("SELECT id FROM leave_types WHERE name_en = ?")
+          .get(leaveTypeName)) as { id: number } | undefined;
+        if (!leaveType) {
+          errors.push(`Row ${i} (${employeeCode}): no leave type named "${leaveTypeName}".`);
+          continue;
+        }
+
+        const { start, end } = leaveYearWindow(employee.joining_date, asOf);
+        const entitlement =
+          employee.annual_leave_override ?? resolveAnnualEntitlement(yearsOfService(employee.joining_date, asOf), rules);
+
+        const existing = (await db
+          .prepare(
+            "SELECT id FROM leave_balances WHERE employee_id = ? AND leave_type_id = ? AND leave_year_start = ?"
+          )
+          .get(employee.id, leaveType.id, start)) as { id: number } | undefined;
+
+        if (existing) {
+          await db.prepare(
+            "UPDATE leave_balances SET entitlement = ?, carried_over = ?, taken = ?, manual_adjustment = ? WHERE id = ?"
+          ).run(entitlement, carriedOver, taken, manualAdjustment, existing.id);
+        } else {
+          await db.prepare(
+            `INSERT INTO leave_balances
+              (employee_id, leave_type_id, leave_year_start, leave_year_end, entitlement, carried_over, taken, manual_adjustment)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(employee.id, leaveType.id, start, end, entitlement, carriedOver, taken, manualAdjustment);
+        }
+
+        updated++;
+      } catch (err) {
+        errors.push(`Row ${i} (${employeeCode}): ${(err as Error).message}`);
+      }
+    }
+
+    await audit(req, "bulk_import_leave_balances", "leave_balances", null, null, { updated, errorCount: errors.length });
+    res.redirect(
+      `/settings/users?lbImported=${updated}&lbErrors=${encodeURIComponent(JSON.stringify(errors.slice(0, 20)))}`
+    );
+  })
+);
+
+settingsRouter.get(
+  "/settings/leave-balances/bulk-import-template.xlsx",
+  asyncHandler(async (_req, res) => {
+    const wb = new ExcelJS.Workbook();
+    const sheet = wb.addWorksheet("Leave balances");
+    sheet.columns = [
+      { header: "employee_code", key: "code", width: 14 },
+      { header: "leave_type", key: "type", width: 18 },
+      { header: "carried_over", key: "carried", width: 14 },
+      { header: "taken", key: "taken", width: 10 },
+      { header: "manual_adjustment", key: "adj", width: 18 },
+    ];
+    sheet.addRow({ code: "RMC-1042", type: "Annual leave", carried: 5, taken: 3, adj: 0 });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="leave-balance-import-template.xlsx"');
+    await wb.xlsx.write(res);
+    res.end();
+  })
+);
+
+// --- Historical data import: existing/active loans -----------------------------
+
+settingsRouter.post(
+  "/settings/loans/bulk-import",
+  upload.single("file"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      res.redirect("/settings/users");
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer as unknown as ArrayBuffer);
+    const sheet = workbook.worksheets[0];
+
+    let created = 0;
+    const errors: string[] = [];
+
+    // Columns: employee_code, amount, months, first_deduction_month (YYYY-MM),
+    // instalments_paid (count already deducted, counted from the first), reason (optional)
+    for (let i = 2; i <= sheet.rowCount; i++) {
+      const row = sheet.getRow(i);
+      const employeeCode = String(row.getCell(1).value ?? "").trim();
+      if (!employeeCode) continue;
+
+      try {
+        const amount = Number(row.getCell(2).value) || 0;
+        const months = Number(row.getCell(3).value) || 0;
+        const firstMonthRaw = row.getCell(4).value;
+        const firstMonth =
+          firstMonthRaw instanceof Date ? firstMonthRaw.toISOString().slice(0, 7) : String(firstMonthRaw ?? "").trim();
+        const instalmentsPaid = Math.max(0, Math.min(months, Number(row.getCell(5).value) || 0));
+        const reason = String(row.getCell(6).value ?? "").trim();
+
+        if (!amount || !months || !firstMonth) {
+          errors.push(`Row ${i} (${employeeCode}): missing amount, months, or first_deduction_month.`);
+          continue;
+        }
+
+        const employee = asRow<Employee | undefined>(
+          await db.prepare("SELECT * FROM employees WHERE employee_code = ?").get(employeeCode)
+        );
+        if (!employee) {
+          errors.push(`Row ${i} (${employeeCode}): no employee with this code.`);
+          continue;
+        }
+
+        const plan = planFromMonths(amount, months, firstMonth);
+        const isClosed = instalmentsPaid >= months;
+        const nowIso = new Date().toISOString();
+
+        const inserted = (await db
+          .prepare(
+            `INSERT INTO loan_requests
+              (employee_id, amount, reason, repayment_option, monthly_amount, months, first_deduction_month,
+               terms_accepted, status, disbursed_at, closed_at)
+             VALUES (?, ?, ?, 'months', ?, ?, ?, 1, ?, ?, ?) RETURNING id`
+          )
+          .get(
+            employee.id,
+            amount,
+            reason || "Imported historical loan",
+            plan.monthlyAmount,
+            months,
+            firstMonth,
+            isClosed ? "closed" : "disbursed",
+            nowIso,
+            isClosed ? nowIso : null
+          )) as { id: number };
+
+        const insertInstalment = db.prepare(
+          `INSERT INTO loan_instalments (loan_request_id, instalment_number, due_month, amount, status, deducted_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        );
+        for (const entry of plan.schedule) {
+          const paid = entry.instalmentNumber <= instalmentsPaid;
+          await insertInstalment.run(
+            inserted.id,
+            entry.instalmentNumber,
+            entry.dueMonth,
+            entry.amount,
+            paid ? "deducted" : "scheduled",
+            paid ? nowIso : null
+          );
+        }
+
+        created++;
+      } catch (err) {
+        errors.push(`Row ${i} (${employeeCode}): ${(err as Error).message}`);
+      }
+    }
+
+    await audit(req, "bulk_import_loans", "loan_requests", null, null, { created, errorCount: errors.length });
+    res.redirect(
+      `/settings/users?loanImported=${created}&loanErrors=${encodeURIComponent(JSON.stringify(errors.slice(0, 20)))}`
+    );
+  })
+);
+
+settingsRouter.get(
+  "/settings/loans/bulk-import-template.xlsx",
+  asyncHandler(async (_req, res) => {
+    const wb = new ExcelJS.Workbook();
+    const sheet = wb.addWorksheet("Loans");
+    sheet.columns = [
+      { header: "employee_code", key: "code", width: 14 },
+      { header: "amount", key: "amount", width: 14 },
+      { header: "months", key: "months", width: 10 },
+      { header: "first_deduction_month", key: "firstMonth", width: 20 },
+      { header: "instalments_paid", key: "paid", width: 18 },
+      { header: "reason", key: "reason", width: 24 },
+    ];
+    sheet.addRow({ code: "RMC-1042", amount: 6000, months: 6, firstMonth: "2026-01", paid: 2, reason: "Imported historical loan" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="loan-import-template.xlsx"');
     await wb.xlsx.write(res);
     res.end();
   })
